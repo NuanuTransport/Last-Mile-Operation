@@ -106,7 +106,13 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .two .card{margin-bottom:0}
 .total-line{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-weight:700}
 tfoot td{font-weight:700;border-top:2px solid var(--line)}
-.b-sale{background:#dcfce7;color:var(--ok)}.b-restock{background:#dbeafe;color:var(--info)}
+.b-sale{background:#dcfce7;color:var(--ok)}.b-restock{background:#dbeafe;color:var(--info)}.b-move{background:#ede9fe;color:#6d28d9}
+.stock-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.stock{border:1px solid var(--line);border-radius:12px;padding:14px}
+.stock .l{font-size:12px;color:var(--muted);font-weight:600}
+.stock .v{font-size:24px;font-weight:700;margin-top:4px}
+.stock .v.neg{color:var(--bad)}
+.qty-row{display:flex;gap:6px}.qty-row select{width:auto}
 .s-N{background:#ede9fe;color:#6d28d9}.s-MID{background:#ccfbf1;color:#0f766e}.s-EO{background:#fce7f3;color:#be185d}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
 @media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
 </style>
@@ -242,6 +248,12 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <label>Dari<input type="date" id="w_from" onchange="loadWater()"></label>
       <label>Sampai<input type="date" id="w_to" onchange="loadWater()"></label>
     </div>
+    <div class="card">
+      <h2>Stok Seharusnya Tersedia <span class="muted">(1 slot = 12 botol)</span></h2>
+      <div class="stock-grid" id="w_stock"></div>
+      <p class="muted" style="margin:10px 0 0">Restock masuk ke Gudang, Isi Showcase memindahkan stok dari Gudang ke Showcase, dan Penjualan mengurangi stok Showcase.</p>
+    </div>
+
     <div class="kpis" id="w_kpis"></div>
 
     <div class="card">
@@ -269,13 +281,25 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
         <h2>Input Restock</h2>
         <div class="form-grid">
           <label><span class="req">Tanggal</span><input type="date" id="wr_date" required></label>
-          <label><span class="req">Qty (botol)</span><input type="number" id="wr_qty" min="1" step="1" inputmode="numeric" required oninput="wrTotal()"></label>
+          <label><span class="req">Qty</span><span class="qty-row"><input type="number" id="wr_qty" min="1" step="1" inputmode="numeric" required oninput="wrTotal()"><select id="wr_unit" onchange="wrTotal()"><option value="12">Slot</option><option value="1">Botol</option></select></span><span class="muted" id="wr_conv"></span></label>
           <label><span class="req">Harga beli / botol (Rp)</span><input type="number" id="wr_cost" min="0" step="1" inputmode="numeric" required oninput="wrTotal()"></label>
           <label>Harga jual / botol (Rp)<input type="number" id="wr_price" min="0" step="1" inputmode="numeric"></label>
         </div>
         <label style="margin-top:12px">Catatan<input id="wr_notes" placeholder="Opsional, mis. supplier"></label>
         <div class="total-line"><span>Total biaya</span><span id="wr_total">Rp 0</span></div>
+        <p class="muted" style="margin:6px 0 0">Restock masuk ke stok Gudang.</p>
         <button class="btn" id="wr_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Restock</button>
+      </form>
+
+      <form class="card" onsubmit="submitWaterMove(event)">
+        <h2>Isi Showcase (dari Gudang)</h2>
+        <div class="form-grid">
+          <label><span class="req">Tanggal</span><input type="date" id="wm_date" required></label>
+          <label><span class="req">Qty</span><span class="qty-row"><input type="number" id="wm_qty" min="1" step="1" inputmode="numeric" required oninput="wmConv()"><select id="wm_unit" onchange="wmConv()"><option value="12">Slot</option><option value="1">Botol</option></select></span><span class="muted" id="wm_conv"></span></label>
+        </div>
+        <label style="margin-top:12px">Catatan<input id="wm_notes" placeholder="Opsional"></label>
+        <p class="muted" style="margin:10px 0 0">Stok Gudang berkurang, stok Showcase bertambah.</p>
+        <button class="btn" id="wm_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Isi Showcase</button>
       </form>
     </div>
 
@@ -667,8 +691,15 @@ function openDay(key) {
 const PAYS = ['Cash', 'Card', 'QRIS', 'Transfer'];
 const DEFAULT_PRICE = 15000;   // harga jual per botol
 const DEFAULT_COST = 1550;     // harga beli per botol
+const SLOT = 12;               // 1 slot = 12 botol
 let WATER = { sales: [], refills: [], stock: 0, lastPrice: 0, lastCost: 0 };
 const rpn = n => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
+function slotFmt(n) {
+  n = Math.round(Number(n) || 0);
+  const neg = n < 0, a = Math.abs(n), s = Math.floor(a / SLOT), b = a % SLOT;
+  const txt = s && b ? s + ' slot + ' + b + ' botol' : s ? s + ' slot' : b + ' botol';
+  return (neg ? '-' : '') + txt;
+}
 const payKey = p => PAYS.find(x => x.toUpperCase() === String(p || '').trim().toUpperCase()) || 'Lainnya';
 
 function refreshAll() {
@@ -681,19 +712,26 @@ function initWater() {
   $('#w_to').value = ymd(t);
   $('#ws_date').value = ymd(t);
   $('#wr_date').value = ymd(t);
+  $('#wm_date').value = ymd(t);
   $('#ws_price').value = DEFAULT_PRICE;
   $('#wr_price').value = DEFAULT_PRICE;
   $('#wr_cost').value = DEFAULT_COST;
   $('#ws_pay').innerHTML = PAYS.map(p => '<button type="button" data-pay="' + p + '" onclick="setPay(\'' + p + '\')">' + p + '</button>').join('');
   setPay('Cash');
-  wsTotal(); wrTotal();
+  wsTotal(); wrTotal(); wmConv();
 }
 function setPay(p) {
   $('#ws_payment').value = p;
   $$('#ws_pay button').forEach(b => b.classList.toggle('active', b.dataset.pay === p));
 }
 function wsTotal() { $('#ws_total').textContent = rpn((Number($('#ws_qty').value) || 0) * (Number($('#ws_price').value) || 0)); }
-function wrTotal() { $('#wr_total').textContent = rpn((Number($('#wr_qty').value) || 0) * (Number($('#wr_cost').value) || 0)); }
+const wrBottles = () => (Number($('#wr_qty').value) || 0) * Number($('#wr_unit').value);
+const wmBottles = () => (Number($('#wm_qty').value) || 0) * Number($('#wm_unit').value);
+function wrTotal() {
+  $('#wr_total').textContent = rpn(wrBottles() * (Number($('#wr_cost').value) || 0));
+  $('#wr_conv').textContent = wrBottles() ? '= ' + wrBottles() + ' botol' : '';
+}
+function wmConv() { $('#wm_conv').textContent = wmBottles() ? '= ' + wmBottles() + ' botol' : ''; }
 function waterMsg(text, cls) { $('#waterMsg').textContent = text; $('#waterMsg').className = 'msg ' + cls; }
 
 async function loadWater() {
@@ -708,7 +746,9 @@ async function loadWater() {
 }
 
 function renderWater() {
-  const S = WATER.sales || [], R = WATER.refills || [];
+  const S = WATER.sales || [], R = WATER.refills || [], M = WATER.moves || [];
+  const stockBox = (label, n) => '<div class="stock"><div class="l">' + label + '</div><div class="v' + (n < 0 ? ' neg' : '') + '">' + slotFmt(n) + '</div><div class="muted">' + Number(n || 0).toLocaleString('id-ID') + ' botol</div></div>';
+  $('#w_stock').innerHTML = stockBox('Showcase', WATER.stockShowcase) + stockBox('Gudang', WATER.stockWarehouse) + stockBox('Total', WATER.stock);
   const sum = (a, f) => a.reduce((x, o) => x + (Number(f(o)) || 0), 0);
   const rev = sum(S, o => o.total), sold = sum(S, o => o.qty);
   const rq = sum(R, o => o.qty), rc = sum(R, o => o.qty * o.cost);
@@ -716,9 +756,9 @@ function renderWater() {
     ['Total Penjualan', rpn(rev)],
     ['Botol Terjual', sold.toLocaleString('id-ID')],
     ['Transaksi', S.length],
-    ['Restock (botol)', rq.toLocaleString('id-ID')],
+    ['Restock', slotFmt(rq)],
     ['Biaya Restock', rpn(rc)],
-    ['Stok Tersedia', Number(WATER.stock || 0).toLocaleString('id-ID') + ' botol']
+    ['Isi Showcase', slotFmt(sum(M, o => o.qty))]
   ];
   $('#w_kpis').innerHTML = k.map(x => '<div class="kpi"><div class="l">' + x[0] + '</div><div class="v">' + x[1] + '</div></div>').join('');
 
@@ -744,13 +784,13 @@ function renderWater() {
       || '<tr><td colspan="7" class="muted">Belum ada penjualan di periode ini</td></tr>') + '</tbody>'
     + (dk.length ? '<tfoot><tr><td>Total</td><td>' + tot.qty + '</td>' + PAYS.map(p => '<td>' + rpn(tot[p]) + '</td>').join('') + '<td>' + rpn(tot.total) + '</td></tr></tfoot>' : '');
 
-  const items = S.map(o => Object.assign({ kind: 'Jual' }, o)).concat(R.map(o => Object.assign({ kind: 'Restock' }, o)))
+  const items = S.map(o => Object.assign({ kind: 'Jual' }, o)).concat(R.map(o => Object.assign({ kind: 'Restock' }, o)), M.map(o => Object.assign({ kind: 'Isi Showcase' }, o)))
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id))).slice(0, 50);
   $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th></tr>'
     + (items.map(o => {
-      const sale = o.kind === 'Jual';
-      return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + (sale ? 'b-sale' : 'b-restock') + '">' + o.kind + '</span></td>'
-        + '<td>' + o.qty + '</td><td>' + rpn(sale ? o.price : o.cost) + '</td><td>' + rpn(sale ? o.total : o.qty * o.cost) + '</td>'
+      const sale = o.kind === 'Jual', move = o.kind === 'Isi Showcase';
+      return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + (sale ? 'b-sale' : move ? 'b-move' : 'b-restock') + '">' + o.kind + '</span></td>'
+        + '<td>' + (sale ? o.qty : slotFmt(o.qty)) + '</td><td>' + (move ? '-' : rpn(sale ? o.price : o.cost)) + '</td><td>' + (move ? '-' : rpn(sale ? o.total : o.qty * o.cost)) + '</td>'
         + '<td>' + esc(sale ? o.payment : '-') + '</td><td>' + esc(o.notes || '') + '</td><td>' + esc(o.by || '') + '</td></tr>';
     }).join('') || '<tr><td colspan="8" class="muted">Belum ada transaksi</td></tr>');
 }
@@ -781,7 +821,7 @@ async function submitWaterRestock(ev) {
   btn.disabled = true; btn.textContent = 'Menyimpan...';
   try {
     const out = await post('waterRestock', {
-      date: $('#wr_date').value, qty: $('#wr_qty').value, cost: $('#wr_cost').value,
+      date: $('#wr_date').value, qty: wrBottles(), cost: $('#wr_cost').value,
       price: $('#wr_price').value, notes: $('#wr_notes').value.trim()
     });
     waterMsg('Restock tersimpan (' + out.id + ').', 'ok');
@@ -791,6 +831,23 @@ async function submitWaterRestock(ev) {
     waterMsg('Gagal menyimpan: ' + err.message, 'err');
   } finally {
     btn.disabled = false; btn.textContent = 'Simpan Restock';
+    window.scrollTo(0, 0);
+  }
+}
+
+async function submitWaterMove(ev) {
+  ev.preventDefault();
+  const btn = $('#wm_btn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    const out = await post('waterMove', { date: $('#wm_date').value, qty: wmBottles(), notes: $('#wm_notes').value.trim() });
+    waterMsg('Isi showcase tersimpan (' + out.id + ').', 'ok');
+    $('#wm_qty').value = ''; $('#wm_notes').value = ''; wmConv();
+    loadWater();
+  } catch (err) {
+    waterMsg('Gagal menyimpan: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Simpan Isi Showcase';
     window.scrollTo(0, 0);
   }
 }
