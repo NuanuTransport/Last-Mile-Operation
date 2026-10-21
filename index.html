@@ -665,6 +665,8 @@ function openDay(key) {
 
 /* ===== AIR MINERAL ===== */
 const PAYS = ['Cash', 'Card', 'QRIS', 'Transfer'];
+const DEFAULT_PRICE = 15000;   // harga jual per botol
+const DEFAULT_COST = 1550;     // harga beli per botol
 let WATER = { sales: [], refills: [], stock: 0, lastPrice: 0, lastCost: 0 };
 const rpn = n => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
 const payKey = p => PAYS.find(x => x.toUpperCase() === String(p || '').trim().toUpperCase()) || 'Lainnya';
@@ -679,8 +681,12 @@ function initWater() {
   $('#w_to').value = ymd(t);
   $('#ws_date').value = ymd(t);
   $('#wr_date').value = ymd(t);
+  $('#ws_price').value = DEFAULT_PRICE;
+  $('#wr_price').value = DEFAULT_PRICE;
+  $('#wr_cost').value = DEFAULT_COST;
   $('#ws_pay').innerHTML = PAYS.map(p => '<button type="button" data-pay="' + p + '" onclick="setPay(\'' + p + '\')">' + p + '</button>').join('');
   setPay('Cash');
+  wsTotal(); wrTotal();
 }
 function setPay(p) {
   $('#ws_payment').value = p;
@@ -695,9 +701,6 @@ async function loadWater() {
     const d = await api({ action: 'water', from: $('#w_from').value, to: $('#w_to').value });
     if (!d.ok) { if (d.error !== 'unauthorized') waterMsg('Error: ' + d.error, 'err'); return; }
     WATER = d;
-    if (!$('#ws_price').value && d.lastPrice) { $('#ws_price').value = d.lastPrice; wsTotal(); }
-    if (!$('#wr_price').value && d.lastPrice) $('#wr_price').value = d.lastPrice;
-    if (!$('#wr_cost').value && d.lastCost) { $('#wr_cost').value = d.lastCost; wrTotal(); }
     renderWater();
   } catch (e) {
     waterMsg('Gagal memuat data air mineral', 'err');
