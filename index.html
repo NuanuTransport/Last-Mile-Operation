@@ -96,7 +96,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 </nav>
 
 <main>
-  <!-- ============ DASHBOARD ============ -->
+  <!-- DASHBOARD -->
   <div class="tab active" id="tab-dash">
     <div class="filters">
       <label>Dari<input type="date" id="from" onchange="load()"></label>
@@ -106,14 +106,11 @@ th{font-size:12px;color:var(--muted);font-weight:600}
       <label>Status<select id="status" onchange="render()"><option value="">Semua</option></select></label>
       <label>Cari<input type="search" id="q" placeholder="Order ID, nama, lokasi..." oninput="render()"></label>
     </div>
-
     <div class="kpis" id="kpis"></div>
-
     <div class="card">
       <h2>Performa Driver</h2>
       <div class="scroll"><table id="drivers"></table></div>
     </div>
-
     <div class="card">
       <h2>Daftar Order <span class="muted" id="count"></span></h2>
       <div id="orders"></div>
@@ -121,7 +118,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     </div>
   </div>
 
-  <!-- ============ DELIVERY BARU ============ -->
+  <!-- DELIVERY BARU -->
   <div class="tab" id="tab-new">
     <div class="msg" id="formMsg"></div>
     <form id="newForm" class="card" onsubmit="submitDelivery(event)">
@@ -130,14 +127,11 @@ th{font-size:12px;color:var(--muted);font-weight:600}
         <button type="button" class="type-btn active" data-type="Delivery" onclick="setType('Delivery')">Delivery</button>
         <button type="button" class="type-btn" data-type="Expedition" onclick="setType('Expedition')">Expedition</button>
       </div>
-
       <div class="form-grid">
         <label><span class="req">Date</span><input type="date" name="date" required></label>
-        <label><span class="req">Driver / Rider</span>
-          <select name="driver" id="f_driver" required><option value="">Pilih driver</option></select></label>
+        <label><span class="req">Driver / Rider</span><select name="driver" id="f_driver" required><option value="">Pilih driver</option></select></label>
       </div>
 
-      <!-- Delivery reguler -->
       <fieldset id="fs-delivery">
         <h2 style="margin-top:18px">Order</h2>
         <div class="form-grid">
@@ -147,48 +141,35 @@ th{font-size:12px;color:var(--muted);font-weight:600}
           <label>No Vendor<input name="noVendor" placeholder="No. booking vendor"></label>
           <label>Order Value (Rp)<input type="number" name="orderValue" min="0" step="1" inputmode="numeric"></label>
         </div>
-
-        <h2 style="margin-top:18px">Pickup & Dropoff</h2>
+        <h2 style="margin-top:18px">Pickup &amp; Dropoff</h2>
         <div class="form-grid">
           <label><span class="req">Pickup</span><input name="pickup" list="dl_pickup" required placeholder="P1"></label>
           <label>Pickup Time<input type="time" name="pickupTime"></label>
           <label><span class="req">Dropoff</span><input name="dropoff" list="dl_location" required placeholder="Venue tujuan"></label>
           <label class="full">Note<textarea name="note"></textarea></label>
         </div>
-
         <h2 style="margin-top:18px">Foto</h2>
         <div class="form-grid">
-          <label>Booking Photo<input type="file" accept="image/*" capture="environment" data-photo="booking">
-            <img class="photo-prev" id="prev_booking"></label>
-          <label>Handover<input type="file" accept="image/*" capture="environment" data-photo="handover">
-            <img class="photo-prev" id="prev_handover"></label>
-          <label>Sealing<input type="file" accept="image/*" capture="environment" data-photo="sealing">
-            <img class="photo-prev" id="prev_sealing"></label>
+          <label>Booking Photo<input type="file" accept="image/*" capture="environment" data-photo="booking"><img class="photo-prev" id="prev_booking"></label>
+          <label>Handover<input type="file" accept="image/*" capture="environment" data-photo="handover"><img class="photo-prev" id="prev_handover"></label>
+          <label>Sealing<input type="file" accept="image/*" capture="environment" data-photo="sealing"><img class="photo-prev" id="prev_sealing"></label>
         </div>
-
         <div class="form-grid" style="margin-top:18px">
           <label><span class="req">Created by</span><input name="createdBy" required></label>
         </div>
       </fieldset>
 
-      <!-- Expedition -->
       <fieldset id="fs-exp" disabled style="display:none">
         <h2 style="margin-top:18px">Paket Ekspedisi</h2>
         <div class="form-grid">
           <label><span class="req">Order ID / No. Resi</span><input name="orderId" required></label>
-          <label><span class="req">Expedition</span><input name="expedition" list="dl_exp" required placeholder="JNE, J&T, SiCepat..."></label>
+          <label><span class="req">Expedition</span><input name="expedition" list="dl_exp" required placeholder="JNE, J&amp;T, SiCepat..."></label>
           <label><span class="req">Name (penerima)</span><input name="name" required></label>
           <label><span class="req">Location</span><input name="location" list="dl_location" required placeholder="Venue tujuan"></label>
           <label>Received (jam terima)<input type="time" name="receivedTime"></label>
-          <label>Payment
-            <select name="payment" id="f_payment" onchange="toggleCod()">
-              <option>Prepaid</option><option>COD</option>
-            </select></label>
-          <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span>
-            <input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
-          <label class="full"><span class="req">Items (foto barang diterima)</span>
-            <input type="file" accept="image/*" capture="environment" id="f_items" required>
-            <img class="photo-prev" id="prev_items"></label>
+          <label>Payment<select name="payment" id="f_payment" onchange="toggleCod()"><option>Prepaid</option><option>COD</option></select></label>
+          <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span><input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
+          <label class="full"><span class="req">Items (foto barang diterima)</span><input type="file" accept="image/*" capture="environment" id="f_items" required><img class="photo-prev" id="prev_items"></label>
           <label class="full">Note<textarea name="note"></textarea></label>
         </div>
       </fieldset>
@@ -198,7 +179,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     </form>
   </div>
 
-  <!-- ============ ON DELIVERY ============ -->
+  <!-- ON DELIVERY -->
   <div class="tab" id="tab-active">
     <div class="msg" id="activeMsg"></div>
     <div class="filters">
@@ -214,7 +195,6 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 <datalist id="dl_location"></datalist>
 <datalist id="dl_exp"></datalist>
 
-<!-- Login PIN -->
 <div class="overlay" id="login">
   <div class="modal" style="max-width:340px">
     <h3>Masukkan PIN</h3>
@@ -224,24 +204,18 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   </div>
 </div>
 
-<!-- Detail order -->
 <div class="overlay" id="detail" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal" id="detailBody"></div>
 </div>
 
-<!-- Delivered / Rejected -->
 <div class="overlay" id="fin" onclick="if(event.target===this)closeFin()">
   <div class="modal" style="max-width:440px">
     <h3 id="finTitle"></h3>
     <div id="finInfo" class="muted" style="margin-bottom:12px"></div>
     <form id="finForm" onsubmit="submitFin(event)">
-      <label id="finReasonWrap"><span class="req">Alasan Rejected</span>
-        <textarea id="finReason" placeholder="Contoh: penerima tidak ditemukan, alamat salah..."></textarea></label>
-      <label style="margin-top:12px"><span id="finPhotoLbl">Foto POD</span>
-        <input type="file" accept="image/*" capture="environment" id="finPhoto">
-        <img class="photo-prev" id="prev_fin"></label>
-      <label id="finReceiverWrap" style="margin-top:12px"><span class="req">Nama Penerima</span>
-        <input id="finReceiver"></label>
+      <label id="finReasonWrap"><span class="req">Alasan Rejected</span><textarea id="finReason" placeholder="Contoh: penerima tidak ditemukan, alamat salah..."></textarea></label>
+      <label style="margin-top:12px"><span id="finPhotoLbl">Foto POD</span><input type="file" accept="image/*" capture="environment" id="finPhoto"><img class="photo-prev" id="prev_fin"></label>
+      <label id="finReceiverWrap" style="margin-top:12px"><span class="req">Nama Penerima</span><input id="finReceiver"></label>
       <div class="msg" id="finMsg" style="margin-top:12px"></div>
       <button class="btn" id="finBtn" style="margin-top:14px;width:100%;padding:12px"></button>
       <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closeFin()">Batal</button>
@@ -251,43 +225,47 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbx6avUa09ERSduGblR-lDsfbggJs6AvAhV336jaUy92I1LIJzCUvOoRnZzEEseE6MoI/exec';
-const APPSHEET_APP = '';
-const PHOTO_TABLE = 'Job';
 const PAGE = 100;
 const PHOTO_COLS = ['Items Photo','Booking Photo','Handover','Sealing','POD Photo'];
-const EXP_LABEL = { 'Vendor':'Expedition', 'Customer Name':'Name', 'Dropoff':'Location', 'Pickup Time':'Received',
-  'Dropoff Time':'Delivery', 'Driver Last Mile':'Rider', 'Order Value':'Amount', 'POD Photo':'Proof of Delivery',
-  'Items Photo':'Items' };
+const EXP_LABEL = {'Vendor':'Expedition','Customer Name':'Name','Dropoff':'Location','Pickup Time':'Received','Dropoff Time':'Delivery','Driver Last Mile':'Rider','Order Value':'Amount','POD Photo':'Proof of Delivery','Items Photo':'Items'};
 
 let ROWS = [], FILTERED = [], ACTIVE = [], VIS = [], shown = PAGE, FIN = null;
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ymd = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-const hm = d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ESC_MAP[c]);
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const hm = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
 const rp = v => { const n = Number(String(v || '').replace(/[^\d]/g, '')); return n ? 'Rp ' + n.toLocaleString('id-ID') : '-'; };
-const lbl = (r, f) => r.Type === 'Expedition' && EXP_LABEL[f] ? EXP_LABEL[f] : f;
+const lbl = (r, f) => (r.Type === 'Expedition' && EXP_LABEL[f]) ? EXP_LABEL[f] : f;
 
-function store(k, v){ try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch(e){ return ''; } }
-function getToken(){ return store('lm_token') || window._tk || ''; }
-function setToken(t){ window._tk = t; store('lm_token', t); }
-function saveToken(){ setToken($('#pin').value.trim()); $('#login').classList.remove('show'); boot(); }
+function store(k, v) {
+  try {
+    if (v === undefined) return localStorage.getItem(k) || '';
+    localStorage.setItem(k, v);
+  } catch (e) { return ''; }
+}
+function getToken() { return store('lm_token') || window._tk || ''; }
+function setToken(t) { window._tk = t; store('lm_token', t); }
+function saveToken() { setToken($('#pin').value.trim()); $('#login').classList.remove('show'); boot(); }
 
-function showTab(t){
+function showTab(t) {
   $$('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   $$('.tab').forEach(x => x.classList.toggle('active', x.id === 'tab-' + t));
   if (t === 'active') loadActive();
   window.scrollTo(0, 0);
 }
 
-function previewOn(input, img){
+function previewOn(input, img) {
   input.addEventListener('change', () => {
     const f = input.files[0];
-    if (f) { img.src = URL.createObjectURL(f); img.style.display = 'block'; } else { img.style.display = 'none'; }
+    if (f) { img.src = URL.createObjectURL(f); img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
   });
 }
 
-function init(){
+function init() {
   const today = new Date(), start = new Date();
   start.setDate(today.getDate() - 6);
   $('#from').value = ymd(start);
@@ -299,11 +277,11 @@ function init(){
   if (!getToken()) { $('#login').classList.add('show'); return; }
   boot();
 }
-function boot(){ load(); loadOptions(); loadActive(); }
+function boot() { load(); loadOptions(); loadActive(); }
 
-async function api(params){
-  const qs = Object.entries(Object.assign({ token: getToken() }, params))
-    .map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&');
+async function api(params) {
+  const all = Object.assign({ token: getToken() }, params);
+  const qs = Object.keys(all).map(k => k + '=' + encodeURIComponent(all[k])).join('&');
   const data = await (await fetch(API_URL + '?' + qs)).json();
   if (!data.ok && data.error === 'unauthorized') {
     $('#loginMsg').textContent = 'PIN salah, coba lagi.';
@@ -311,15 +289,15 @@ async function api(params){
   }
   return data;
 }
-async function post(action, data){
-  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ token: getToken(), action, data }) });
+async function post(action, data) {
+  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ token: getToken(), action: action, data: data }) });
   const out = await res.json();
   if (!out.ok) throw new Error(out.error);
   return out;
 }
 
-/* ================= DASHBOARD ================= */
-async function load(){
+/* ===== DASHBOARD ===== */
+async function load() {
   $('#updated').textContent = 'Memuat...';
   try {
     const data = await api({ from: $('#from').value, to: $('#to').value });
@@ -334,51 +312,58 @@ async function load(){
   }
 }
 
-function fillOptions(sel, key){
+function fillOptions(sel, key) {
   const el = $(sel), cur = el.value;
   const vals = [...new Set(ROWS.map(r => r[key]).filter(Boolean))].sort();
-  el.innerHTML = '<option value="">Semua</option>' + vals.map(v => `<option>${esc(v)}</option>`).join('');
+  el.innerHTML = '<option value="">Semua</option>' + vals.map(v => '<option>' + esc(v) + '</option>').join('');
   if (vals.includes(cur)) el.value = cur;
 }
 
-function secs(s){
+function secs(s) {
   if (!s) return null;
   const p = String(s).split(':').map(Number);
   if (p.some(isNaN)) return null;
-  return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p.length === 2 ? p[0]*60 + p[1] : null;
+  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+  if (p.length === 2) return p[0] * 60 + p[1];
+  return null;
 }
-function fmtDur(sec){
+function fmtDur(sec) {
   if (sec == null) return '-';
   sec = Math.round(sec);
-  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
-  return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  return Math.floor(sec / 3600) + ':' + pad(Math.floor(sec % 3600 / 60)) + ':' + pad(sec % 60);
 }
 const isLate = r => /late/i.test(r['On Time / Late'] || '');
 const isOnTime = r => /on\s*time/i.test(r['On Time / Late'] || '');
-const statusKey = s => 'b-' + String(s || '').toLowerCase().replace(/\s+/g,'');
-const pct = (a, b) => b ? (a/b*100).toFixed(1) + '%' : '-';
+const statusKey = s => 'b-' + String(s || '').toLowerCase().replace(/\s+/g, '');
+const pct = (a, b) => b ? (a / b * 100).toFixed(1) + '%' : '-';
 const avgDur = list => {
   const d = list.map(r => secs(r['Duration'])).filter(v => v != null);
-  return d.length ? fmtDur(d.reduce((a,b) => a+b, 0) / d.length) : '-';
+  return d.length ? fmtDur(d.reduce((a, b) => a + b, 0) / d.length) : '-';
 };
-const timeOf = s => { const m = String(s || '').match(/(\d{1,2}):(\d{2})(?!.*\d{1,2}:\d{2})/); return m ? m[1].padStart(2,'0') + ':' + m[2] : ''; };
+function timeOf(s) {
+  const all = String(s || '').match(/\d{1,2}:\d{2}/g);
+  if (!all) return '';
+  const t = all[all.length - 1].split(':');
+  return pad(t[0]) + ':' + t[1];
+}
 const sortKey = r => String(r['Date']) + timeOf(r['Pickup Time']);
 const typeBadge = r => r.Type === 'Expedition' ? '<span class="badge b-exp">Expedition</span> ' : '';
 
-function render(){
-  const ty = $('#type').value, drv = $('#driver').value, st = $('#status').value, q = $('#q').value.trim().toLowerCase();
+function render() {
+  const ty = $('#type').value, drv = $('#driver').value, st = $('#status').value;
+  const q = $('#q').value.trim().toLowerCase();
+  const keys = ['Order ID', 'Customer Name', 'Dropoff', 'Vendor', 'Receiver', 'No Vendor'];
   FILTERED = ROWS.filter(r =>
     (!ty || r.Type === ty) &&
     (!drv || r['Driver Last Mile'] === drv) &&
     (!st || r['Status'] === st) &&
-    (!q || ['Order ID','Customer Name','Dropoff','Vendor','Receiver','No Vendor']
-            .some(k => String(r[k] || '').toLowerCase().includes(q)))
-  ).sort((a,b) => sortKey(b).localeCompare(sortKey(a)));
+    (!q || keys.some(k => String(r[k] || '').toLowerCase().includes(q)))
+  ).sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   shown = PAGE;
   renderKpis(); renderDrivers(); renderOrders();
 }
 
-function renderKpis(){
+function renderKpis() {
   const L = FILTERED;
   const cnt = s => L.filter(r => (r['Status'] || '').toLowerCase() === s).length;
   const onT = L.filter(isOnTime).length, late = L.filter(isLate).length;
@@ -391,87 +376,82 @@ function renderKpis(){
     ['On Time Rate', pct(onT, onT + late)],
     ['Rata-rata Durasi', avgDur(L)]
   ];
-  $('#kpis').innerHTML = k.map(([l,v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+  $('#kpis').innerHTML = k.map(x => '<div class="kpi"><div class="l">' + x[0] + '</div><div class="v">' + x[1] + '</div></div>').join('');
 }
 
-function renderDrivers(){
+function renderDrivers() {
   const g = {};
   FILTERED.forEach(r => { const d = r['Driver Last Mile'] || '(kosong)'; (g[d] = g[d] || []).push(r); });
-  const rows = Object.entries(g).sort((a,b) => b[1].length - a[1].length).map(([d, L]) => {
+  const rows = Object.keys(g).sort((a, b) => g[b].length - g[a].length).map(d => {
+    const L = g[d];
     const onT = L.filter(isOnTime).length, late = L.filter(isLate).length;
     const del = L.filter(r => /delivered/i.test(r['Status'] || '')).length;
     const rej = L.filter(r => /rejected/i.test(r['Status'] || '')).length;
-    return `<tr><td>${esc(d)}</td><td>${L.length}</td><td>${del}</td><td>${rej}</td><td>${onT}</td><td>${late}</td><td>${pct(onT, onT+late)}</td><td>${avgDur(L)}</td></tr>`;
+    return '<tr><td>' + esc(d) + '</td><td>' + L.length + '</td><td>' + del + '</td><td>' + rej + '</td><td>' + onT + '</td><td>' + late + '</td><td>' + pct(onT, onT + late) + '</td><td>' + avgDur(L) + '</td></tr>';
   }).join('');
   $('#drivers').innerHTML = '<tr><th>Driver</th><th>Order</th><th>Delivered</th><th>Rejected</th><th>On Time</th><th>Late</th><th>On Time %</th><th>Avg Durasi</th></tr>'
     + (rows || '<tr><td colspan="8" class="muted">Tidak ada data</td></tr>');
 }
 
-function renderOrders(){
+function renderOrders() {
   $('#count').textContent = '(' + FILTERED.length + ')';
-  $('#orders').innerHTML = FILTERED.slice(0, shown).map((r, i) => `
-    <div class="order" onclick="openDetail(FILTERED[${i}])">
-      <div>
-        <div class="t">${typeBadge(r)}${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Customer Name'])}</div>
-        <div class="s">${esc(r['Vendor'])} → ${esc(r['Dropoff'])}</div>
-        <div class="s">${esc(r['Driver Last Mile'])} · ${esc(r['Date'])} ${esc(timeOf(r['Pickup Time']))}</div>
-      </div>
-      <div class="r">
-        <span class="badge ${statusKey(r['Status'])}">${esc(r['Status'] || '-')}</span><br>
-        ${r['On Time / Late'] ? `<span class="badge ${isLate(r) ? 'b-late' : 'b-ontime'}" style="margin-top:4px">${esc(r['On Time / Late'])}</span>` : ''}
-        <div class="s">${esc(r['Duration'] || '')}</div>
-      </div>
-    </div>`).join('') || '<p class="muted">Tidak ada order.</p>';
+  const html = FILTERED.slice(0, shown).map((r, i) => {
+    const otl = r['On Time / Late']
+      ? '<span class="badge ' + (isLate(r) ? 'b-late' : 'b-ontime') + '" style="margin-top:4px">' + esc(r['On Time / Late']) + '</span>' : '';
+    return '<div class="order" onclick="openDetail(FILTERED[' + i + '])">'
+      + '<div><div class="t">' + typeBadge(r) + esc(r['Order ID'] || r['System ID']) + ' · ' + esc(r['Customer Name']) + '</div>'
+      + '<div class="s">' + esc(r['Vendor']) + ' → ' + esc(r['Dropoff']) + '</div>'
+      + '<div class="s">' + esc(r['Driver Last Mile']) + ' · ' + esc(r['Date']) + ' ' + esc(timeOf(r['Pickup Time'])) + '</div></div>'
+      + '<div class="r"><span class="badge ' + statusKey(r['Status']) + '">' + esc(r['Status'] || '-') + '</span><br>' + otl
+      + '<div class="s">' + esc(r['Duration'] || '') + '</div></div></div>';
+  }).join('');
+  $('#orders').innerHTML = html || '<p class="muted">Tidak ada order.</p>';
   $('#more').style.display = FILTERED.length > shown ? 'block' : 'none';
 }
-function showMore(){ shown += PAGE; renderOrders(); }
+function showMore() { shown += PAGE; renderOrders(); }
 
-function photoUrl(v){
+function photoUrl(v) {
   if (!v) return '';
-  if (/^https?:\/\//i.test(v)) return v;
-  if (APPSHEET_APP) return 'https://www.appsheet.com/template/gettablefileurl?appName=' + encodeURIComponent(APPSHEET_APP)
-    + '&tableName=' + encodeURIComponent(PHOTO_TABLE) + '&fileName=' + encodeURIComponent(v);
-  return '';
+  return /^https?:\/\//i.test(v) ? v : '';
 }
 
-function openDetail(r){
-  const fields = ['Type','System ID','Order ID','Date','Driver Last Mile','Customer Name','Vendor','No Vendor',
-    'Order Value','Payment','Pickup','Pickup Time','Dropoff','Dropoff Time','Receiver','Status','Duration',
-    'On Time / Late','SLA Check','Note','Created by'].filter(f => f in r);
+function openDetail(r) {
+  const fields = ['Type', 'System ID', 'Order ID', 'Date', 'Driver Last Mile', 'Customer Name', 'Vendor', 'No Vendor',
+    'Order Value', 'Payment', 'Pickup', 'Pickup Time', 'Dropoff', 'Dropoff Time', 'Receiver', 'Status', 'Duration',
+    'On Time / Late', 'SLA Check', 'Note', 'Created by'].filter(f => f in r);
   const photos = PHOTO_COLS.filter(k => k in r).map(k => {
     const u = photoUrl(r[k]);
-    if (u) return `<figure><a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="${k}" loading="lazy"></a><figcaption>${lbl(r,k)}</figcaption></figure>`;
-    return r[k] ? `<figure><figcaption>${lbl(r,k)}: ${esc(r[k])}</figcaption></figure>` : '';
+    if (u) return '<figure><a href="' + esc(u) + '" target="_blank"><img src="' + esc(u) + '" alt="' + k + '" loading="lazy"></a><figcaption>' + lbl(r, k) + '</figcaption></figure>';
+    return r[k] ? '<figure><figcaption>' + lbl(r, k) + ': ' + esc(r[k]) + '</figcaption></figure>' : '';
   }).join('');
-  $('#detailBody').innerHTML = `
-    <h3>${typeBadge(r)}${esc(r['Order ID'] || r['System ID'])}</h3>
-    <div class="grid">${fields.map(f => `<div>${lbl(r,f)}</div><div>${esc(r[f] || '-')}</div>`).join('')}</div>
-    <div class="photos">${photos}</div>
-    <button class="btn ghost" style="margin-top:14px;width:100%" onclick="$('#detail').classList.remove('show')">Tutup</button>`;
+  $('#detailBody').innerHTML = '<h3>' + typeBadge(r) + esc(r['Order ID'] || r['System ID']) + '</h3>'
+    + '<div class="grid">' + fields.map(f => '<div>' + lbl(r, f) + '</div><div>' + esc(r[f] || '-') + '</div>').join('') + '</div>'
+    + '<div class="photos">' + photos + '</div>'
+    + '<button class="btn ghost" style="margin-top:14px;width:100%" onclick="document.getElementById(\'detail\').classList.remove(\'show\')">Tutup</button>';
   $('#detail').classList.add('show');
 }
 
-/* ================= FORM BARU ================= */
-async function loadOptions(){
+/* ===== FORM BARU ===== */
+async function loadOptions() {
   try {
     const o = await api({ action: 'options' });
     if (!o.ok) return;
-    const fill = (id, list) => $(id).innerHTML = list.map(v => `<option value="${esc(v)}">`).join('');
-    const opts = o.drivers.map(v => `<option>${esc(v)}</option>`).join('');
+    const fill = (id, list) => { $(id).innerHTML = list.map(v => '<option value="' + esc(v) + '">').join(''); };
+    const opts = o.drivers.map(v => '<option>' + esc(v) + '</option>').join('');
     const cur = $('#f_driver').value;
     $('#f_driver').innerHTML = '<option value="">Pilih driver</option>' + opts;
     if (cur) $('#f_driver').value = cur;
     $('#a_driver').innerHTML = '<option value="">Semua driver</option>' + opts;
     $('#a_driver').value = store('lm_activeDriver');
-    fill('#dl_vendor', o.vendors);
-    fill('#dl_pickup', o.pickups);
-    fill('#dl_location', o.locations);
-    fill('#dl_exp', o.expeditions);
+    fill('#dl_vendor', o.vendors || []);
+    fill('#dl_pickup', o.pickups || []);
+    fill('#dl_location', o.locations || []);
+    fill('#dl_exp', o.expeditions || []);
     renderActive();
   } catch (e) {}
 }
 
-function setType(t){
+function setType(t) {
   $('#f_type').value = t;
   store('lm_type', t);
   $$('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === t));
@@ -484,33 +464,35 @@ function setType(t){
   resetForm();
 }
 
-function toggleCod(){
+function toggleCod() {
   const cod = $('#f_payment').value === 'COD';
   $('#codWrap').style.display = cod ? '' : 'none';
   $('#f_amount').required = cod;
 }
 
-function resetForm(){
+function resetForm() {
   const f = $('#newForm'), keepDriver = $('#f_driver').value, keepType = $('#f_type').value;
   f.reset();
   $('#f_type').value = keepType;
-  f.date.value = ymd(new Date());
-  f.pickupTime.value = hm(new Date());
-  f.receivedTime.value = hm(new Date());
-  f.createdBy.value = store('lm_createdBy');
+  f.querySelector('[name=date]').value = ymd(new Date());
+  f.querySelector('[name=pickupTime]').value = hm(new Date());
+  f.querySelector('[name=receivedTime]').value = hm(new Date());
+  f.querySelector('[name=createdBy]').value = store('lm_createdBy');
   if (keepDriver) $('#f_driver').value = keepDriver;
   $$('#newForm .photo-prev').forEach(i => { i.style.display = 'none'; i.removeAttribute('src'); });
   toggleCod();
 }
 
-function compress(file, max = 1280, q = 0.75){
+function compress(file, max, q) {
+  max = max || 1280; q = q || 0.75;
   return new Promise((res, rej) => {
     if (!file) return res('');
     const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => {
       const s = Math.min(1, max / Math.max(img.width, img.height));
       const c = document.createElement('canvas');
-      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.width = Math.round(img.width * s);
+      c.height = Math.round(img.height * s);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
       res(c.toDataURL('image/jpeg', q));
@@ -520,7 +502,7 @@ function compress(file, max = 1280, q = 0.75){
   });
 }
 
-async function submitDelivery(ev){
+async function submitDelivery(ev) {
   ev.preventDefault();
   const f = ev.target, btn = $('#submitBtn'), msg = $('#formMsg'), label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Mengirim...';
@@ -548,8 +530,8 @@ async function submitDelivery(ev){
   }
 }
 
-/* ================= ON DELIVERY ================= */
-async function loadActive(){
+/* ===== ON DELIVERY ===== */
+async function loadActive() {
   try {
     const data = await api({ action: 'active' });
     if (!data.ok) return;
@@ -560,52 +542,45 @@ async function loadActive(){
   }
 }
 
-function startDate(r){
+function startDate(r) {
   const t = timeOf(r['Pickup Time']);
   if (!r['Date'] || !t) return null;
   const m = String(r['Pickup Time']).match(/^(\d{4}-\d{2}-\d{2})/);
   return new Date((m ? m[1] : r['Date']) + 'T' + t + ':00');
 }
 
-function renderActive(){
+function renderActive() {
   $('#activeCnt').textContent = ACTIVE.length;
   const drv = $('#a_driver').value, ty = $('#a_type').value;
   VIS = ACTIVE.filter(r => (!drv || r['Driver Last Mile'] === drv) && (!ty || r.Type === ty))
-    .sort((a,b) => sortKey(a).localeCompare(sortKey(b)));
-  $('#activeList').innerHTML = VIS.map((r, i) => {
+    .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  const html = VIS.map((r, i) => {
+    const isExp = r.Type === 'Expedition';
     const p = startDate(r);
     const min = p ? Math.floor((Date.now() - p) / 60000) : null;
-    const el = min == null || r.Type === 'Expedition' ? '<span></span>'
-      : `<span class="elapsed ${min >= 30 ? 'long' : ''}">${min} menit</span>`;
-    const cod = r.Type === 'Expedition' && /cod/i.test(r['Payment'] || '')
-      ? `<div class="s cod">COD ${rp(r['Order Value'])}</div>` : '';
-    const sub = r.Type === 'Expedition'
-      ? `${esc(r['Order ID'])} · ${esc(r['Vendor'])} · ${esc(r['Driver Last Mile'])}`
-      : `${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Vendor'])} · ${esc(r['Driver Last Mile'])}`;
-    const when = r.Type === 'Expedition'
-      ? `Received ${esc(timeOf(r['Pickup Time']))}`
-      : `Pickup ${esc(r['Pickup'])} ${esc(timeOf(r['Pickup Time']))}`;
-    return `
-      <div class="job">
-        <div class="t">${typeBadge(r)}${esc(r['Customer Name'])} → ${esc(r['Dropoff'])}</div>
-        <div class="s">${sub}</div>
-        <div class="s">${when}${r['Note'] ? ' · ' + esc(r['Note']) : ''}</div>
-        ${cod}
-        <div class="row">
-          ${el}
-          <div class="acts">
-            <button class="btn danger" onclick="openFin(${i}, 'Rejected')">Rejected</button>
-            <button class="btn" onclick="openFin(${i}, 'Delivered')">Kirim POD</button>
-          </div>
-        </div>
-      </div>`;
-  }).join('') || '<p class="muted">Tidak ada order yang sedang dikirim.</p>';
+    const el = (min == null || isExp) ? '<span></span>'
+      : '<span class="elapsed' + (min >= 30 ? ' long' : '') + '">' + min + ' menit</span>';
+    const cod = (isExp && /cod/i.test(r['Payment'] || '')) ? '<div class="s cod">COD ' + rp(r['Order Value']) + '</div>' : '';
+    const sub = esc(r['Order ID'] || r['System ID']) + ' · ' + esc(r['Vendor']) + ' · ' + esc(r['Driver Last Mile']);
+    const when = isExp ? 'Received ' + esc(timeOf(r['Pickup Time']))
+      : 'Pickup ' + esc(r['Pickup']) + ' ' + esc(timeOf(r['Pickup Time']));
+    const note = r['Note'] ? ' · ' + esc(r['Note']) : '';
+    return '<div class="job">'
+      + '<div class="t">' + typeBadge(r) + esc(r['Customer Name']) + ' → ' + esc(r['Dropoff']) + '</div>'
+      + '<div class="s">' + sub + '</div>'
+      + '<div class="s">' + when + note + '</div>' + cod
+      + '<div class="row">' + el
+      + '<div class="acts"><button class="btn danger" onclick="openFin(' + i + ',\'Rejected\')">Rejected</button>'
+      + '<button class="btn" onclick="openFin(' + i + ',\'Delivered\')">Kirim POD</button></div>'
+      + '</div></div>';
+  }).join('');
+  $('#activeList').innerHTML = html || '<p class="muted">Tidak ada order yang sedang dikirim.</p>';
 }
 
-function openFin(i, result){
+function openFin(i, result) {
   const r = VIS[i];
   if (!r) return;
-  FIN = { r, result };
+  FIN = { r: r, result: result };
   const del = result === 'Delivered';
   const needReceiver = del && r.Type === 'Delivery';
   $('#finForm').reset();
@@ -622,19 +597,18 @@ function openFin(i, result){
   $('#finReceiver').value = r['Customer Name'] || '';
   $('#finBtn').textContent = del ? 'Kirim & Set Delivered' : 'Set Rejected';
   $('#finBtn').className = del ? 'btn' : 'btn red';
-  $('#finBtn').style.cssText = 'margin-top:14px;width:100%;padding:12px';
-  const cod = r.Type === 'Expedition' && /cod/i.test(r['Payment'] || '')
-    ? `<br><span class="cod">COD ${rp(r['Order Value'])}, tagih ke penerima</span>` : '';
-  $('#finInfo').innerHTML = `${typeBadge(r)}<b>${esc(r['Customer Name'])}</b> → ${esc(r['Dropoff'])}<br>`
-    + `${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Driver Last Mile'])}${cod}`;
+  const cod = (r.Type === 'Expedition' && /cod/i.test(r['Payment'] || ''))
+    ? '<br><span class="cod">COD ' + rp(r['Order Value']) + ', tagih ke penerima</span>' : '';
+  $('#finInfo').innerHTML = typeBadge(r) + '<b>' + esc(r['Customer Name']) + '</b> → ' + esc(r['Dropoff']) + '<br>'
+    + esc(r['Order ID'] || r['System ID']) + ' · ' + esc(r['Driver Last Mile']) + cod;
   $('#fin').classList.add('show');
 }
-function closeFin(){ $('#fin').classList.remove('show'); FIN = null; }
+function closeFin() { $('#fin').classList.remove('show'); FIN = null; }
 
-async function submitFin(ev){
+async function submitFin(ev) {
   ev.preventDefault();
   if (!FIN) return;
-  const { r, result } = FIN;
+  const r = FIN.r, result = FIN.result;
   const btn = $('#finBtn'), msg = $('#finMsg'), label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Mengirim...';
   msg.className = 'msg';
@@ -643,7 +617,25 @@ async function submitFin(ev){
     const out = await post('finish', {
       type: r.Type,
       id: r.Type === 'Expedition' ? r['Order ID'] : r['System ID'],
-      result,
+      result: result,
       receiver: $('#finReceiver').value.trim(),
       reason: $('#finReason').value.trim(),
-      photo
+      photo: photo
+    });
+    closeFin();
+    $('#activeMsg').textContent = 'Order ' + out.id + ' ' + out.result + ' pukul ' + out.time + '.';
+    $('#activeMsg').className = 'msg ok';
+    loadActive(); load();
+  } catch (err) {
+    msg.textContent = 'Gagal: ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+
+init();
+setInterval(function () { load(); loadActive(); }, 120000);
+</script>
+</body>
+</html>
