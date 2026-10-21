@@ -751,8 +751,13 @@ function renderWater() {
   const sum = (a, f) => a.reduce((x, o) => x + (Number(f(o)) || 0), 0);
   const rev = sum(S, o => o.total), sold = sum(S, o => o.qty);
   const rq = sum(R, o => o.qty), rc = sum(R, o => o.qty * o.cost);
+  const unitCost = Number(WATER.lastCost) || DEFAULT_COST;   // HPP per botol = harga beli restock terakhir
+  const cogs = sold * unitCost, net = rev - cogs;
   const k = [
-    ['Total Penjualan', rpn(rev)],
+    ['Gross Revenue', rpn(rev)],
+    ['COGS (' + rpn(unitCost) + '/botol)', rpn(cogs)],
+    ['Net', rpn(net)],
+    ['Margin', rev ? (net / rev * 100).toFixed(1) + '%' : '-'],
     ['Botol Terjual', sold.toLocaleString('id-ID')],
     ['Transaksi', S.length],
     ['Restock', slotFmt(rq)],
@@ -778,10 +783,10 @@ function renderWater() {
   const dk = Object.keys(days).sort().reverse();
   const tot = { qty: sold, total: rev };
   PAYS.forEach(p => { tot[p] = sum(S.filter(o => payKey(o.payment) === p), o => o.total); });
-  $('#w_daily').innerHTML = '<thead><tr><th>Tanggal</th><th>Botol</th>' + PAYS.map(p => '<th>' + p + '</th>').join('') + '<th>Total</th></tr></thead>'
-    + '<tbody>' + (dk.map(d => '<tr><td>' + esc(d) + '</td><td>' + days[d].qty + '</td>' + PAYS.map(p => '<td>' + (days[d][p] ? rpn(days[d][p]) : '-') + '</td>').join('') + '<td><b>' + rpn(days[d].total) + '</b></td></tr>').join('')
-      || '<tr><td colspan="7" class="muted">Belum ada penjualan di periode ini</td></tr>') + '</tbody>'
-    + (dk.length ? '<tfoot><tr><td>Total</td><td>' + tot.qty + '</td>' + PAYS.map(p => '<td>' + rpn(tot[p]) + '</td>').join('') + '<td>' + rpn(tot.total) + '</td></tr></tfoot>' : '');
+  $('#w_daily').innerHTML = '<thead><tr><th>Tanggal</th><th>Botol</th>' + PAYS.map(p => '<th>' + p + '</th>').join('') + '<th>Gross</th><th>COGS</th><th>Net</th></tr></thead>'
+    + '<tbody>' + (dk.map(d => '<tr><td>' + esc(d) + '</td><td>' + days[d].qty + '</td>' + PAYS.map(p => '<td>' + (days[d][p] ? rpn(days[d][p]) : '-') + '</td>').join('') + '<td>' + rpn(days[d].total) + '</td><td>' + rpn(days[d].qty * unitCost) + '</td><td><b>' + rpn(days[d].total - days[d].qty * unitCost) + '</b></td></tr>').join('')
+      || '<tr><td colspan="9" class="muted">Belum ada penjualan di periode ini</td></tr>') + '</tbody>'
+    + (dk.length ? '<tfoot><tr><td>Total</td><td>' + tot.qty + '</td>' + PAYS.map(p => '<td>' + rpn(tot[p]) + '</td>').join('') + '<td>' + rpn(tot.total) + '</td><td>' + rpn(cogs) + '</td><td>' + rpn(net) + '</td></tr></tfoot>' : '');
 
   const items = S.map(o => Object.assign({ kind: 'Jual' }, o)).concat(R.map(o => Object.assign({ kind: 'Restock' }, o)), M.map(o => Object.assign({ kind: 'Isi Showcase' }, o)))
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id))).slice(0, 50);
