@@ -112,7 +112,9 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .stock .l{font-size:12px;color:var(--muted);font-weight:600}
 .stock .v{font-size:24px;font-weight:700;margin-top:4px}
 .stock .v.neg{color:var(--bad)}
-.qty-row{display:flex;gap:6px}.qty-row select{width:auto}
+.team-tag{display:inline-block;padding:1px 6px;border-radius:99px;font-size:11px;font-weight:600;background:#eef2f7;color:var(--muted)}
+.t-taxi{background:#fef3c7;color:var(--warn)}.t-lm{background:#dbeafe;color:var(--info)}.b-dep{background:#fce7f3;color:#be185d}
+.owe{color:var(--bad);font-weight:700}
 .s-N{background:#ede9fe;color:#6d28d9}.s-MID{background:#ccfbf1;color:#0f766e}.s-EO{background:#fce7f3;color:#be185d}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
 @media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
 </style>
@@ -257,6 +259,11 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
     <div class="kpis" id="w_kpis"></div>
 
     <div class="card">
+      <h2>Penjualan per Tim</h2>
+      <div class="pay-grid" id="w_team"></div>
+    </div>
+
+    <div class="card">
       <h2>Penjualan per Metode Bayar</h2>
       <div class="pay-grid" id="w_pay"></div>
     </div>
@@ -274,10 +281,11 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
         <input type="hidden" id="ws_payment" value="Cash">
         <label>Catatan<input id="ws_notes" placeholder="Opsional"></label>
         <div class="total-line"><span>Total</span><span id="ws_total">Rp 0</span></div>
+        <p class="muted" id="ws_who" style="margin:6px 0 0"></p>
         <button class="btn" id="ws_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Penjualan</button>
       </form>
 
-      <form class="card" onsubmit="submitWaterRestock(event)">
+      <form class="card owner-only" onsubmit="submitWaterRestock(event)">
         <h2>Input Restock</h2>
         <div class="form-grid">
           <label><span class="req">Tanggal</span><input type="date" id="wr_date" required></label>
@@ -300,6 +308,21 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
         <label style="margin-top:12px">Catatan<input id="wm_notes" placeholder="Opsional"></label>
         <p class="muted" style="margin:10px 0 0">Stok Gudang berkurang, stok Showcase bertambah.</p>
         <button class="btn" id="wm_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Isi Showcase</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Setoran Cash Last Mile <span class="muted">(cash hasil jual Last Mile diserahkan ke tim Taxi)</span></h2>
+      <div class="scroll"><table id="w_dep"></table></div>
+      <form onsubmit="submitWaterDeposit(event)" style="margin-top:14px">
+        <div class="form-grid">
+          <label><span class="req">Tanggal</span><input type="date" id="wd_date" required></label>
+          <label><span class="req">Dari (penjual Last Mile)</span><select id="wd_from" required onchange="wdFill()"></select></label>
+          <label><span class="req">Jumlah (Rp)</span><input type="number" id="wd_amount" min="1" step="1" inputmode="numeric" required></label>
+          <label><span class="req">Diterima oleh (tim Taxi)</span><input id="wd_recv" required placeholder="Nama penerima"></label>
+        </div>
+        <label style="margin-top:12px">Catatan<input id="wd_notes" placeholder="Opsional"></label>
+        <button class="btn" id="wd_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Setoran</button>
       </form>
     </div>
 
@@ -403,16 +426,16 @@ async function doLogin(ev) {
     window._tok = out.token;
     store('lm_tok', out.token);
     store('lm_email', out.email);
-    $('#userEmail').textContent = out.email;
+    USER = { email: out.email, name: out.name || '', team: out.team || 'Last Mile' };
     $('#login').classList.remove('show');
-    if (!BOOTED) boot(); else { load(); loadActive(); }
+    boot();
   } catch (err) {
     $('#loginMsg').textContent = err.message;
   } finally {
     btn.disabled = false; btn.textContent = 'Masuk';
   }
 }
-function signOut() { clearTok(); showLogin('Anda sudah keluar.'); }
+function signOut() { clearTok(); USER = { email: '', name: '', team: '' }; showLogin('Anda sudah keluar.'); }
 function handleAuthError(err) {
   if (err === 'unauthorized') { clearTok(); showLogin('Sesi habis, silakan masuk lagi.'); return true; }
   return false;
@@ -449,7 +472,30 @@ function init() {
   $('#userEmail').textContent = tokEmail(t);
   boot();
 }
-function boot() { BOOTED = true; load(); loadOptions(); loadActive(); loadCal(); }
+/* ===== ROLE TIM ===== */
+// Taxi = pemilik air mineral (hanya tab Air Mineral), Last Mile = delivery + bantu jual, Admin = semua
+let USER = { email: '', name: '', team: '' };
+const canDel = () => USER.team !== 'Taxi';
+const isOwner = () => USER.team === 'Taxi' || USER.team === 'Admin';
+function applyRole() {
+  $('#userEmail').textContent = (USER.name || USER.email) + (USER.team ? ' · ' + USER.team : '');
+  ['dash', 'new', 'active'].forEach(t => { $('nav [data-tab="' + t + '"]').style.display = canDel() ? '' : 'none'; });
+  $$('.owner-only').forEach(el => { el.style.display = isOwner() ? '' : 'none'; });
+  $('#ws_who').textContent = 'Tercatat atas nama ' + (USER.name || USER.email) + ' (' + (USER.team === 'Last Mile' ? 'Last Mile' : 'Taxi') + ')';
+  if (!$('#wd_recv').value && USER.team !== 'Last Mile') $('#wd_recv').value = USER.name || '';
+  if (!canDel()) showTab('water');
+}
+async function boot() {
+  BOOTED = true;
+  try {
+    const me = await api({ action: 'me' });
+    if (!me.ok) { if (me.error !== 'unauthorized') $('#updated').textContent = 'Error: ' + me.error; return; }
+    USER = { email: me.email, name: me.name || '', team: me.team || 'Last Mile' };
+  } catch (e) { $('#updated').textContent = 'Gagal memuat data'; return; }
+  applyRole();
+  if (canDel()) { load(); loadOptions(); loadActive(); loadCal(); }
+  else $('#updated').textContent = 'Air Mineral · Guest Mobility';
+}
 
 async function api(params) {
   const tok = getTok();
@@ -703,7 +749,7 @@ function slotFmt(n) {
 const payKey = p => PAYS.find(x => x.toUpperCase() === String(p || '').trim().toUpperCase()) || 'Lainnya';
 
 function refreshAll() {
-  load(); loadActive(); loadCal();
+  if (canDel()) { load(); loadActive(); loadCal(); }
   if ($('#tab-water').classList.contains('active')) loadWater();
 }
 function initWater() {
@@ -713,6 +759,7 @@ function initWater() {
   $('#ws_date').value = ymd(t);
   $('#wr_date').value = ymd(t);
   $('#wm_date').value = ymd(t);
+  $('#wd_date').value = ymd(t);
   $('#ws_price').value = DEFAULT_PRICE;
   $('#wr_price').value = DEFAULT_PRICE;
   $('#wr_cost').value = DEFAULT_COST;
@@ -747,7 +794,8 @@ async function loadWater() {
 }
 
 function renderWater() {
-  const S = WATER.sales || [], R = WATER.refills || [], M = WATER.moves || [];
+  const S = WATER.sales || [], R = WATER.refills || [], M = WATER.moves || [], D = WATER.deposits || [];
+  const own = !!WATER.owner;
   const stockBox = (label, n) => '<div class="stock"><div class="l">' + label + '</div><div class="v' + (n < 0 ? ' neg' : '') + '">' + btl(n) + '</div><div class="muted">= ' + slotFmt(n) + '</div></div>';
   $('#w_stock').innerHTML = stockBox('Showcase', WATER.stockShowcase) + stockBox('Gudang', WATER.stockWarehouse) + stockBox('Total', WATER.stock);
   const sum = (a, f) => a.reduce((x, o) => x + (Number(f(o)) || 0), 0);
@@ -755,18 +803,34 @@ function renderWater() {
   const rq = sum(R, o => o.qty), rc = sum(R, o => o.qty * o.cost);
   const unitCost = Number(WATER.lastCost) || DEFAULT_COST;   // HPP per botol = harga beli restock terakhir
   const cogs = sold * unitCost, net = rev - cogs;
-  const k = [
-    ['Gross Revenue', rpn(rev)],
-    ['COGS (' + rpn(unitCost) + '/botol)', rpn(cogs)],
-    ['Net', rpn(net)],
-    ['Margin', rev ? (net / rev * 100).toFixed(1) + '%' : '-'],
-    ['Botol Terjual', sold.toLocaleString('id-ID')],
-    ['Transaksi', S.length],
-    ['Restock', btl(rq)],
-    ['Biaya Restock', rpn(rc)],
-    ['Isi Showcase', btl(sum(M, o => o.qty))]
-  ];
+  const k = [['Gross Revenue', rpn(rev)]]
+    .concat(own ? [['COGS (' + rpn(unitCost) + '/botol)', rpn(cogs)], ['Net', rpn(net)], ['Margin', rev ? (net / rev * 100).toFixed(1) + '%' : '-']] : [])
+    .concat([['Botol Terjual', sold.toLocaleString('id-ID')], ['Transaksi', S.length], ['Restock', btl(rq)]])
+    .concat(own ? [['Biaya Restock', rpn(rc)]] : [])
+    .concat([['Isi Showcase', btl(sum(M, o => o.qty))]]);
   $('#w_kpis').innerHTML = k.map(x => '<div class="kpi"><div class="l">' + x[0] + '</div><div class="v">' + x[1] + '</div></div>').join('');
+
+  $('#w_team').innerHTML = ['Taxi', 'Last Mile'].map(t => {
+    const L = S.filter(o => o.team === t);
+    const tt = sum(L, o => o.total);
+    const cs = sum(L.filter(o => payKey(o.payment) === 'Cash'), o => o.total);
+    return '<div class="pay"><div class="l">' + t + '</div><div class="v">' + rpn(tt) + '</div>'
+      + '<div class="muted">' + L.length + ' transaksi · ' + btl(sum(L, o => o.qty)) + ' · Cash ' + rpn(cs) + '</div></div>';
+  }).join('');
+
+  const C = WATER.cashLM || [];
+  $('#w_dep').innerHTML = '<thead><tr><th>Penjual Last Mile</th><th>Cash Terjual</th><th>Sudah Disetor</th><th>Belum Disetor</th></tr></thead><tbody>'
+    + (C.map(x => '<tr><td>' + esc(x.name) + '</td><td>' + rpn(x.cash) + '</td><td>' + rpn(x.deposit) + '</td><td' + (x.outstanding > 0 ? ' class="owe"' : '') + '>' + rpn(x.outstanding) + '</td></tr>').join('')
+      || '<tr><td colspan="4" class="muted">Belum ada data</td></tr>') + '</tbody>'
+    + (C.length ? '<tfoot><tr><td>Total</td><td>' + rpn(sum(C, x => x.cash)) + '</td><td>' + rpn(sum(C, x => x.deposit)) + '</td><td>' + rpn(sum(C, x => x.outstanding)) + '</td></tr></tfoot>' : '');
+  const sel = $('#wd_from'), cur = sel.value;
+  const opts = USER.team === 'Last Mile'
+    ? [{ email: USER.email, name: USER.name || USER.email }]
+    : (WATER.sellers || []).concat(C.filter(x => !(WATER.sellers || []).some(y => y.email === x.email)));
+  sel.innerHTML = opts.map(x => '<option value="' + esc(x.email) + '">' + esc(x.name) + '</option>').join('');
+  sel.disabled = USER.team === 'Last Mile';
+  if (opts.some(x => x.email === cur)) sel.value = cur;
+  if (!$('#wd_amount').value) wdFill();
 
   const groups = PAYS.concat(S.some(o => payKey(o.payment) === 'Lainnya') ? ['Lainnya'] : []);
   $('#w_pay').innerHTML = groups.map(p => {
@@ -785,20 +849,29 @@ function renderWater() {
   const dk = Object.keys(days).sort().reverse();
   const tot = { qty: sold, total: rev };
   PAYS.forEach(p => { tot[p] = sum(S.filter(o => payKey(o.payment) === p), o => o.total); });
-  $('#w_daily').innerHTML = '<thead><tr><th>Tanggal</th><th>Botol</th>' + PAYS.map(p => '<th>' + p + '</th>').join('') + '<th>Gross</th><th>COGS</th><th>Net</th></tr></thead>'
-    + '<tbody>' + (dk.map(d => '<tr><td>' + esc(d) + '</td><td>' + days[d].qty + '</td>' + PAYS.map(p => '<td>' + (days[d][p] ? rpn(days[d][p]) : '-') + '</td>').join('') + '<td>' + rpn(days[d].total) + '</td><td>' + rpn(days[d].qty * unitCost) + '</td><td><b>' + rpn(days[d].total - days[d].qty * unitCost) + '</b></td></tr>').join('')
+  $('#w_daily').innerHTML = '<thead><tr><th>Tanggal</th><th>Botol</th>' + PAYS.map(p => '<th>' + p + '</th>').join('') + '<th>Gross</th>' + (own ? '<th>COGS</th><th>Net</th>' : '') + '</tr></thead>'
+    + '<tbody>' + (dk.map(d => '<tr><td>' + esc(d) + '</td><td>' + days[d].qty + '</td>' + PAYS.map(p => '<td>' + (days[d][p] ? rpn(days[d][p]) : '-') + '</td>').join('') + '<td>' + rpn(days[d].total) + '</td>' + (own ? '<td>' + rpn(days[d].qty * unitCost) + '</td><td><b>' + rpn(days[d].total - days[d].qty * unitCost) + '</b></td>' : '') + '</tr>').join('')
       || '<tr><td colspan="9" class="muted">Belum ada penjualan di periode ini</td></tr>') + '</tbody>'
-    + (dk.length ? '<tfoot><tr><td>Total</td><td>' + tot.qty + '</td>' + PAYS.map(p => '<td>' + rpn(tot[p]) + '</td>').join('') + '<td>' + rpn(tot.total) + '</td><td>' + rpn(cogs) + '</td><td>' + rpn(net) + '</td></tr></tfoot>' : '');
+    + (dk.length ? '<tfoot><tr><td>Total</td><td>' + tot.qty + '</td>' + PAYS.map(p => '<td>' + rpn(tot[p]) + '</td>').join('') + '<td>' + rpn(tot.total) + '</td>' + (own ? '<td>' + rpn(cogs) + '</td><td>' + rpn(net) + '</td>' : '') + '</tr></tfoot>' : '');
 
-  const items = S.map(o => Object.assign({ kind: 'Jual' }, o)).concat(R.map(o => Object.assign({ kind: 'Restock' }, o)), M.map(o => Object.assign({ kind: 'Isi Showcase' }, o)))
+  const items = S.map(o => Object.assign({ kind: 'Jual' }, o)).concat(R.map(o => Object.assign({ kind: 'Restock' }, o)), M.map(o => Object.assign({ kind: 'Isi Showcase' }, o)), D.map(o => Object.assign({ kind: 'Setoran' }, o)))
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id))).slice(0, 50);
-  $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th></tr>'
+  const BADGE = { 'Jual': 'b-sale', 'Restock': 'b-restock', 'Isi Showcase': 'b-move', 'Setoran': 'b-dep' };
+  const teamTag = t => t ? '<span class="team-tag ' + (t === 'Taxi' ? 't-taxi' : 't-lm') + '">' + t + '</span>' : '-';
+  $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Tim</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th></tr>'
     + (items.map(o => {
-      const sale = o.kind === 'Jual', move = o.kind === 'Isi Showcase';
-      return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + (sale ? 'b-sale' : move ? 'b-move' : 'b-restock') + '">' + o.kind + '</span></td>'
-        + '<td>' + btl(o.qty) + '</td><td>' + (move ? '-' : rpn(sale ? o.price : o.cost)) + '</td><td>' + (move ? '-' : rpn(sale ? o.total : o.qty * o.cost)) + '</td>'
-        + '<td>' + esc(sale ? o.payment : '-') + '</td><td>' + esc(o.notes || '') + '</td><td>' + esc(o.by || '') + '</td></tr>';
-    }).join('') || '<tr><td colspan="8" class="muted">Belum ada transaksi</td></tr>');
+      const k = o.kind;
+      let qty = btl(o.qty), price = '-', total = '-', pay = '-', team = '', note = o.notes || '';
+      if (k === 'Jual') { price = rpn(o.price); total = rpn(o.total); pay = o.payment; team = o.team; }
+      if (k === 'Restock' && own) { price = rpn(o.cost); total = rpn(o.qty * o.cost); }
+      if (k === 'Setoran') {
+        qty = '-'; total = rpn(o.amount); pay = 'Cash'; team = 'Last Mile';
+        note = 'Dari ' + o.from + ' ke ' + o.receivedBy + (o.notes ? '. ' + o.notes : '');
+      }
+      return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + BADGE[k] + '">' + k + '</span></td><td>' + teamTag(team) + '</td>'
+        + '<td>' + qty + '</td><td>' + price + '</td><td>' + total + '</td>'
+        + '<td>' + esc(pay) + '</td><td>' + esc(note) + '</td><td>' + esc(o.by || '') + '</td></tr>';
+    }).join('') || '<tr><td colspan="9" class="muted">Belum ada transaksi</td></tr>');
 }
 
 async function submitWaterSale(ev) {
@@ -854,6 +927,31 @@ async function submitWaterMove(ev) {
     waterMsg('Gagal menyimpan: ' + err.message, 'err');
   } finally {
     btn.disabled = false; btn.textContent = 'Simpan Isi Showcase';
+    window.scrollTo(0, 0);
+  }
+}
+
+function wdFill() {
+  const x = (WATER.cashLM || []).filter(o => o.email === $('#wd_from').value)[0];
+  $('#wd_amount').value = x && x.outstanding > 0 ? x.outstanding : '';
+}
+
+async function submitWaterDeposit(ev) {
+  ev.preventDefault();
+  const btn = $('#wd_btn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    const out = await post('waterDeposit', {
+      date: $('#wd_date').value, from: $('#wd_from').value, amount: $('#wd_amount').value,
+      receivedBy: $('#wd_recv').value.trim(), notes: $('#wd_notes').value.trim()
+    });
+    waterMsg('Setoran tersimpan (' + out.id + ').', 'ok');
+    $('#wd_amount').value = ''; $('#wd_notes').value = '';
+    loadWater();
+  } catch (err) {
+    waterMsg('Gagal menyimpan: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Simpan Setoran';
     window.scrollTo(0, 0);
   }
 }
@@ -1062,7 +1160,7 @@ async function submitFin(ev) {
 }
 
 init();
-setInterval(function () { if (getTok()) { load(); loadActive(); } }, 120000);
+setInterval(function () { if (getTok() && USER.team && canDel()) { load(); loadActive(); } }, 120000);
 </script>
 </body>
 </html>
