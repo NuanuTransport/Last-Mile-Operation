@@ -97,8 +97,8 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .cal .chip{display:block;font-size:10.5px;border-radius:4px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal .cnt2{display:none;font-size:11px;color:var(--muted);margin-top:4px}
 .legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.s-M1{background:#dbeafe;color:#1d4ed8}.s-M2{background:#ccfbf1;color:#0f766e}.s-A{background:#ffedd5;color:#c2410c}
-.s-N{background:#ede9fe;color:#6d28d9}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
+.s-M,.s-M1{background:#dbeafe;color:#1d4ed8}.s-M2{background:#ccfbf1;color:#0f766e}.s-A{background:#ffedd5;color:#c2410c}
+.s-N{background:#ede9fe;color:#6d28d9}.s-MID{background:#ccfbf1;color:#0f766e}.s-EO{background:#fce7f3;color:#be185d}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
 @media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
 </style>
 </head>
@@ -520,8 +520,8 @@ const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustu
 const DOW = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
 function shiftCls(s) {
   const k = String(s || '').trim().toUpperCase();
-  if (/^(OFF|LIBUR|L|CUTI)$/.test(k)) return 's-OFF';
-  return ['M1', 'M2', 'A', 'N'].indexOf(k) >= 0 ? 's-' + k : 's-x';
+  if (/^(OFF|DO|LIBUR|L|CUTI)$/.test(k)) return 's-OFF';
+  return ['M', 'M1', 'M2', 'MID', 'A', 'N', 'EO'].indexOf(k) >= 0 ? 's-' + k : 's-x';
 }
 const isOff = s => shiftCls(s) === 's-OFF' ? 1 : 0;
 const calSort = (a, b) => isOff(a.shift) - isOff(b.shift) || a.shift.localeCompare(b.shift) || a.driver.localeCompare(b.driver);
