@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nuanu Last Mile</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--text:#1d2330;--muted:#6b7280;--line:#e5e7eb;--brand:#0f766e;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--info:#1d4ed8}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+header{background:var(--brand);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+header h1{font-size:17px;margin:0}
+header small{display:block;font-size:12px;opacity:.85;font-weight:400}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.btn{border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
+.btn.light{background:rgba(255,255,255,.2)}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
+.filters label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;width:100%;color:var(--text)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-size:22px;font-weight:700;margin-top:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
+.card h2{font-size:15px;margin:0 0 10px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.order{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.order:hover{background:#f9fafb}
+.order .t{font-weight:600}
+.order .s{font-size:12px;color:var(--muted);margin-top:2px}
+.order .r{text-align:right;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#eef2f7;color:var(--muted)}
+.b-delivered{background:#dcfce7;color:var(--ok)}
+.b-ondelivery{background:#dbeafe;color:var(--info)}
+.b-rejected{background:#fee2e2;color:var(--bad)}
+.b-late{background:#fef3c7;color:var(--warn)}
+.b-ontime{background:#dcfce7;color:var(--ok)}
+.muted{color:var(--muted);font-size:12px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:90vh;overflow:auto;padding:18px}
+.modal h3{margin:0 0 12px;font-size:16px}
+.grid{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:13px}
+.grid div:nth-child(odd){color:var(--muted)}
+.photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:14px}
+.photos figure{margin:0}
+.photos img{width:100%;border-radius:8px;border:1px solid var(--line);background:#f3f4f6}
+.photos figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+#more{display:block;margin:12px auto 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Nuanu Last Mile<small id="updated">Memuat...</small></h1>
+  <button class="btn light" onclick="load()">Refresh</button>
+</header>
+
+<main>
+  <div class="filters">
+    <label>Dari<input type="date" id="from" onchange="load()"></label>
+    <label>Sampai<input type="date" id="to" onchange="load()"></label>
+    <label>Driver<select id="driver" onchange="render()"><option value="">Semua</option></select></label>
+    <label>Status<select id="status" onchange="render()"><option value="">Semua</option></select></label>
+    <label>Cari<input type="search" id="q" placeholder="Order ID, customer, dropoff..." oninput="render()"></label>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <h2>Performa Driver</h2>
+    <div class="scroll"><table id="drivers"></table></div>
+  </div>
+
+  <div class="card">
+    <h2>Daftar Order <span class="muted" id="count"></span></h2>
+    <div id="orders"></div>
+    <button class="btn" id="more" onclick="showMore()">Tampilkan lebih banyak</button>
+  </div>
+</main>
+
+<!-- Login PIN -->
+<div class="overlay" id="login">
+  <div class="modal" style="max-width:340px">
+    <h3>Masukkan PIN</h3>
+    <input type="password" id="pin" placeholder="PIN" onkeydown="if(event.key==='Enter')saveToken()">
+    <p class="muted" id="loginMsg"></p>
+    <button class="btn" onclick="saveToken()" style="width:100%">Masuk</button>
+  </div>
+</div>
+
+<!-- Detail order -->
+<div class="overlay" id="detail" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" id="detailBody"></div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbx6avUa09ERSduGblR-lDsfbggJs6AvAhV336jaUy92I1LIJzCUvOoRnZzEEseE6MoI/exec';
+const APPSHEET_APP = '';      // opsional: nama app AppSheet, untuk menampilkan foto
+const PHOTO_TABLE = 'Job';
+const PAGE = 100;
+
+let ROWS = [], FILTERED = [], shown = PAGE;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ymd = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+
+function getToken(){ try { return localStorage.getItem('lm_token') || ''; } catch(e){ return window._tk || ''; } }
+function setToken(t){ window._tk = t; try { localStorage.setItem('lm_token', t); } catch(e){} }
+function saveToken(){ setToken($('#pin').value.trim()); $('#login').classList.remove('show'); load(); }
+
+function init(){
+  const today = new Date(), start = new Date();
+  start.setDate(today.getDate() - 6);
+  $('#from').value = ymd(start);
+  $('#to').value = ymd(today);
+  if (!getToken()) { $('#login').classList.add('show'); return; }
+  load();
+}
+
+async function load(){
+  $('#updated').textContent = 'Memuat...';
+  try {
+    const url = API_URL + '?token=' + encodeURIComponent(getToken())
+      + '&from=' + $('#from').value + '&to=' + $('#to').value;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.ok) {
+      if (data.error === 'unauthorized') {
+        $('#loginMsg').textContent = 'PIN salah, coba lagi.';
+        $('#login').classList.add('show');
+      } else {
+        $('#updated').textContent = 'Error: ' + data.error;
+      }
+      return;
+    }
+    ROWS = data.rows;
+    $('#updated').textContent = 'Update ' + data.updated + ' WITA';
+    fillOptions('#driver', 'Driver Last Mile');
+    fillOptions('#status', 'Status');
+    render();
+  } catch (err) {
+    $('#updated').textContent = 'Gagal memuat data';
+  }
+}
+
+function fillOptions(sel, key){
+  const el = $(sel), cur = el.value;
+  const vals = [...new Set(ROWS.map(r => r[key]).filter(Boolean))].sort();
+  el.innerHTML = '<option value="">Semua</option>' + vals.map(v => `<option>${esc(v)}</option>`).join('');
+  if (vals.includes(cur)) el.value = cur;
+}
+
+function secs(s){
+  if (!s) return null;
+  const p = String(s).split(':').map(Number);
+  if (p.some(isNaN)) return null;
+  return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p.length === 2 ? p[0]*60 + p[1] : null;
+}
+function fmtDur(sec){
+  if (sec == null) return '-';
+  sec = Math.round(sec);
+  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+const isLate = r => /late/i.test(r['On Time / Late'] || '');
+const isOnTime = r => /on\s*time/i.test(r['On Time / Late'] || '');
+const statusKey = s => 'b-' + String(s || '').toLowerCase().replace(/\s+/g,'');
+const pct = (a, b) => b ? (a/b*100).toFixed(1) + '%' : '-';
+const avgDur = list => {
+  const d = list.map(r => secs(r['Duration'])).filter(v => v != null);
+  return d.length ? fmtDur(d.reduce((a,b) => a+b, 0) / d.length) : '-';
+};
+
+function render(){
+  const drv = $('#driver').value, st = $('#status').value, q = $('#q').value.trim().toLowerCase();
+  FILTERED = ROWS.filter(r =>
+    (!drv || r['Driver Last Mile'] === drv) &&
+    (!st || r['Status'] === st) &&
+    (!q || ['Order ID','Customer Name','Dropoff','Vendor','Receiver','No Vendor']
+            .some(k => String(r[k] || '').toLowerCase().includes(q)))
+  ).sort((a,b) => (String(b['Date']) + b['Pickup Time']).localeCompare(String(a['Date']) + a['Pickup Time']));
+  shown = PAGE;
+  renderKpis(); renderDrivers(); renderOrders();
+}
+
+function renderKpis(){
+  const L = FILTERED;
+  const cnt = s => L.filter(r => (r['Status'] || '').toLowerCase() === s).length;
+  const onT = L.filter(isOnTime).length, late = L.filter(isLate).length;
+  const k = [
+    ['Total Order', L.length],
+    ['Delivered', cnt('delivered')],
+    ['On Delivery', cnt('on delivery')],
+    ['Rejected', cnt('rejected')],
+    ['On Time Rate', pct(onT, onT + late)],
+    ['Rata-rata Durasi', avgDur(L)]
+  ];
+  $('#kpis').innerHTML = k.map(([l,v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+}
+
+function renderDrivers(){
+  const g = {};
+  FILTERED.forEach(r => { const d = r['Driver Last Mile'] || '(kosong)'; (g[d] = g[d] || []).push(r); });
+  const rows = Object.entries(g).sort((a,b) => b[1].length - a[1].length).map(([d, L]) => {
+    const onT = L.filter(isOnTime).length, late = L.filter(isLate).length;
+    const del = L.filter(r => /delivered/i.test(r['Status'] || '')).length;
+    return `<tr><td>${esc(d)}</td><td>${L.length}</td><td>${del}</td><td>${onT}</td><td>${late}</td><td>${pct(onT, onT+late)}</td><td>${avgDur(L)}</td></tr>`;
+  }).join('');
+  $('#drivers').innerHTML = '<tr><th>Driver</th><th>Order</th><th>Delivered</th><th>On Time</th><th>Late</th><th>On Time %</th><th>Avg Durasi</th></tr>'
+    + (rows || '<tr><td colspan="7" class="muted">Tidak ada data</td></tr>');
+}
+
+function renderOrders(){
+  $('#count').textContent = '(' + FILTERED.length + ')';
+  $('#orders').innerHTML = FILTERED.slice(0, shown).map((r, i) => `
+    <div class="order" onclick="openDetail(${i})">
+      <div>
+        <div class="t">${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Customer Name'])}</div>
+        <div class="s">${esc(r['Vendor'])} → ${esc(r['Dropoff'])}</div>
+        <div class="s">${esc(r['Driver Last Mile'])} · ${esc(r['Date'])} ${esc(r['Pickup Time'])}</div>
+      </div>
+      <div class="r">
+        <span class="badge ${statusKey(r['Status'])}">${esc(r['Status'] || '-')}</span><br>
+        ${r['On Time / Late'] ? `<span class="badge ${isLate(r) ? 'b-late' : 'b-ontime'}" style="margin-top:4px">${esc(r['On Time / Late'])}</span>` : ''}
+        <div class="s">${esc(r['Duration'] || '')}</div>
+      </div>
+    </div>`).join('') || '<p class="muted">Tidak ada order.</p>';
+  $('#more').style.display = FILTERED.length > shown ? 'block' : 'none';
+}
+function showMore(){ shown += PAGE; renderOrders(); }
+
+function photoUrl(v){
+  if (!v) return '';
+  if (/^https?:\/\//i.test(v)) return v;
+  if (APPSHEET_APP) return 'https://www.appsheet.com/template/gettablefileurl?appName=' + encodeURIComponent(APPSHEET_APP)
+    + '&tableName=' + encodeURIComponent(PHOTO_TABLE) + '&fileName=' + encodeURIComponent(v);
+  return '';
+}
+
+function openDetail(i){
+  const r = FILTERED[i];
+  const fields = ['System ID','Order ID','Date','Driver Last Mile','Customer Name','Vendor','No Vendor','Order Value',
+    'Pickup','Pickup Time','Dropoff','Dropoff Time','Receiver','Status','Duration','On Time / Late','SLA Check','Note','Created by'];
+  const photos = ['Booking Photo','Handover','Sealing'].map(k => {
+    const u = photoUrl(r[k]);
+    if (u) return `<figure><a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="${k}" loading="lazy"></a><figcaption>${k}</figcaption></figure>`;
+    return r[k] ? `<figure><figcaption>${k}: ${esc(r[k])}</figcaption></figure>` : '';
+  }).join('');
+  $('#detailBody').innerHTML = `
+    <h3>${esc(r['Order ID'] || r['System ID'])}</h3>
+    <div class="grid">${fields.map(f => `<div>${f}</div><div>${esc(r[f] || '-')}</div>`).join('')}</div>
+    <div class="photos">${photos}</div>
+    <button class="btn" style="margin-top:14px;width:100%" onclick="$('#detail').classList.remove('show')">Tutup</button>`;
+  $('#detail').classList.add('show');
+}
+
+init();
+setInterval(load, 5 * 60 * 1000); // auto refresh tiap 5 menit
+</script>
+</body>
+</html>
