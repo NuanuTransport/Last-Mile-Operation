@@ -11,18 +11,24 @@ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;b
 header{background:var(--brand);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 header h1{font-size:17px;margin:0}
 header small{display:block;font-size:12px;opacity:.85;font-weight:400}
+nav{background:#fff;border-bottom:1px solid var(--line);display:flex;padding:0 16px;position:sticky;top:0;z-index:5}
+nav button{background:none;border:0;padding:12px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+nav button.active{color:var(--brand);border-bottom-color:var(--brand)}
 main{max-width:1100px;margin:0 auto;padding:16px}
+.tab{display:none}.tab.active{display:block}
 .btn{border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
 .btn.light{background:rgba(255,255,255,.2)}
+.btn:disabled{opacity:.6;cursor:wait}
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
-.filters label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
-input,select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;width:100%;color:var(--text)}
+label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;width:100%;color:var(--text)}
+textarea{min-height:70px;resize:vertical}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .kpi .l{font-size:12px;color:var(--muted)}
 .kpi .v{font-size:22px;font-weight:700;margin-top:4px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
-.card h2{font-size:15px;margin:0 0 10px}
+.card h2{font-size:15px;margin:0 0 12px}
 .scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
 th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -39,6 +45,13 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .b-late{background:#fef3c7;color:var(--warn)}
 .b-ontime{background:#dcfce7;color:var(--ok)}
 .muted{color:var(--muted);font-size:12px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.form-grid .full{grid-column:1/-1}
+.req::after{content:" *";color:var(--bad)}
+.photo-prev{width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:none;margin-top:4px}
+.msg{padding:10px 12px;border-radius:8px;margin-bottom:12px;display:none;font-weight:600}
+.msg.ok{display:block;background:#dcfce7;color:var(--ok)}
+.msg.err{display:block;background:#fee2e2;color:var(--bad)}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
 .overlay.show{display:flex}
 .modal{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:90vh;overflow:auto;padding:18px}
@@ -59,28 +72,89 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   <button class="btn light" onclick="load()">Refresh</button>
 </header>
 
+<nav>
+  <button class="active" data-tab="dash" onclick="showTab('dash')">Dashboard</button>
+  <button data-tab="new" onclick="showTab('new')">Delivery Baru</button>
+</nav>
+
 <main>
-  <div class="filters">
-    <label>Dari<input type="date" id="from" onchange="load()"></label>
-    <label>Sampai<input type="date" id="to" onchange="load()"></label>
-    <label>Driver<select id="driver" onchange="render()"><option value="">Semua</option></select></label>
-    <label>Status<select id="status" onchange="render()"><option value="">Semua</option></select></label>
-    <label>Cari<input type="search" id="q" placeholder="Order ID, customer, dropoff..." oninput="render()"></label>
+  <!-- ============ DASHBOARD ============ -->
+  <div class="tab active" id="tab-dash">
+    <div class="filters">
+      <label>Dari<input type="date" id="from" onchange="load()"></label>
+      <label>Sampai<input type="date" id="to" onchange="load()"></label>
+      <label>Driver<select id="driver" onchange="render()"><option value="">Semua</option></select></label>
+      <label>Status<select id="status" onchange="render()"><option value="">Semua</option></select></label>
+      <label>Cari<input type="search" id="q" placeholder="Order ID, customer, dropoff..." oninput="render()"></label>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card">
+      <h2>Performa Driver</h2>
+      <div class="scroll"><table id="drivers"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Daftar Order <span class="muted" id="count"></span></h2>
+      <div id="orders"></div>
+      <button class="btn" id="more" onclick="showMore()">Tampilkan lebih banyak</button>
+    </div>
   </div>
 
-  <div class="kpis" id="kpis"></div>
+  <!-- ============ DELIVERY BARU ============ -->
+  <div class="tab" id="tab-new">
+    <div class="msg" id="formMsg"></div>
+    <form id="newForm" class="card" onsubmit="submitDelivery(event)">
+      <h2>Order</h2>
+      <div class="form-grid">
+        <label><span class="req">Date</span><input type="date" name="date" required></label>
+        <label>Order ID<input name="orderId" placeholder="Nomor order"></label>
+        <label><span class="req">Driver Last Mile</span>
+          <select name="driver" id="f_driver" required><option value="">Pilih driver</option></select></label>
+        <label><span class="req">Customer Name</span><input name="customer" required></label>
+        <label><span class="req">Vendor</span><input name="vendor" list="dl_vendor" required placeholder="Gojek, Grab, JNE..."></label>
+        <label>No Vendor<input name="noVendor" placeholder="No. resi / booking vendor"></label>
+        <label>Order Value (Rp)<input type="number" name="orderValue" min="0" step="1" inputmode="numeric"></label>
+      </div>
 
-  <div class="card">
-    <h2>Performa Driver</h2>
-    <div class="scroll"><table id="drivers"></table></div>
-  </div>
+      <h2 style="margin-top:18px">Pickup & Dropoff</h2>
+      <div class="form-grid">
+        <label><span class="req">Pickup</span><input name="pickup" list="dl_pickup" required placeholder="P1"></label>
+        <label>Pickup Time<input type="time" name="pickupTime"></label>
+        <label><span class="req">Dropoff</span><input name="dropoff" list="dl_dropoff" required placeholder="Venue tujuan"></label>
+        <label class="full">Note<textarea name="note"></textarea></label>
+      </div>
 
-  <div class="card">
-    <h2>Daftar Order <span class="muted" id="count"></span></h2>
-    <div id="orders"></div>
-    <button class="btn" id="more" onclick="showMore()">Tampilkan lebih banyak</button>
+      <h2 style="margin-top:18px">Foto</h2>
+      <div class="form-grid">
+        <label>Booking Photo<input type="file" accept="image/*" capture="environment" data-photo="booking">
+          <img class="photo-prev" id="prev_booking"></label>
+        <label>Handover<input type="file" accept="image/*" capture="environment" data-photo="handover">
+          <img class="photo-prev" id="prev_handover"></label>
+        <label>Sealing<input type="file" accept="image/*" capture="environment" data-photo="sealing">
+          <img class="photo-prev" id="prev_sealing"></label>
+      </div>
+
+      <h2 style="margin-top:18px">Status</h2>
+      <div class="form-grid">
+        <label><span class="req">Status</span>
+          <select name="status" id="f_status" onchange="toggleDone()">
+            <option>On Delivery</option><option>Delivered</option><option>Rejected</option>
+          </select></label>
+        <label class="done"><span class="req">Dropoff Time</span><input type="time" name="dropoffTime"></label>
+        <label class="done"><span class="req">Receiver</span><input name="receiver"></label>
+        <label><span class="req">Created by</span><input name="createdBy" id="f_createdBy" required></label>
+      </div>
+
+      <button class="btn" id="submitBtn" style="margin-top:18px;width:100%;padding:12px">Submit Delivery</button>
+    </form>
   </div>
 </main>
+
+<datalist id="dl_vendor"></datalist>
+<datalist id="dl_pickup"></datalist>
+<datalist id="dl_dropoff"></datalist>
 
 <!-- Login PIN -->
 <div class="overlay" id="login">
@@ -98,43 +172,55 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbx6avUa09ERSduGblR-lDsfbggJs6AvAhV336jaUy92I1LIJzCUvOoRnZzEEseE6MoI/exec';
-const APPSHEET_APP = '';      // opsional: nama app AppSheet, untuk menampilkan foto
+const API_URL = 'PASTE_URL_EXEC_DI_SINI';
+const APPSHEET_APP = '';      // opsional: nama app AppSheet, untuk menampilkan foto lama
 const PHOTO_TABLE = 'Job';
 const PAGE = 100;
 
 let ROWS = [], FILTERED = [], shown = PAGE;
 const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ymd = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+const hm = d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 
-function getToken(){ try { return localStorage.getItem('lm_token') || ''; } catch(e){ return window._tk || ''; } }
-function setToken(t){ window._tk = t; try { localStorage.setItem('lm_token', t); } catch(e){} }
-function saveToken(){ setToken($('#pin').value.trim()); $('#login').classList.remove('show'); load(); }
+function store(k, v){ try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch(e){ return ''; } }
+function getToken(){ return store('lm_token') || window._tk || ''; }
+function setToken(t){ window._tk = t; store('lm_token', t); }
+function saveToken(){ setToken($('#pin').value.trim()); $('#login').classList.remove('show'); load(); loadOptions(); }
+
+function showTab(t){
+  $$('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  $$('.tab').forEach(x => x.classList.toggle('active', x.id === 'tab-' + t));
+  window.scrollTo(0, 0);
+}
 
 function init(){
   const today = new Date(), start = new Date();
   start.setDate(today.getDate() - 6);
   $('#from').value = ymd(start);
   $('#to').value = ymd(today);
+  resetForm();
+  $$('input[data-photo]').forEach(inp => inp.addEventListener('change', () => {
+    const f = inp.files[0], img = $('#prev_' + inp.dataset.photo);
+    if (f) { img.src = URL.createObjectURL(f); img.style.display = 'block'; } else { img.style.display = 'none'; }
+  }));
   if (!getToken()) { $('#login').classList.add('show'); return; }
-  load();
+  load(); loadOptions();
 }
 
+/* ================= DASHBOARD ================= */
 async function load(){
   $('#updated').textContent = 'Memuat...';
   try {
     const url = API_URL + '?token=' + encodeURIComponent(getToken())
       + '&from=' + $('#from').value + '&to=' + $('#to').value;
-    const res = await fetch(url);
-    const data = await res.json();
+    const data = await (await fetch(url)).json();
     if (!data.ok) {
       if (data.error === 'unauthorized') {
         $('#loginMsg').textContent = 'PIN salah, coba lagi.';
         $('#login').classList.add('show');
-      } else {
-        $('#updated').textContent = 'Error: ' + data.error;
-      }
+      } else $('#updated').textContent = 'Error: ' + data.error;
       return;
     }
     ROWS = data.rows;
@@ -258,8 +344,92 @@ function openDetail(i){
   $('#detail').classList.add('show');
 }
 
+/* ================= DELIVERY BARU ================= */
+async function loadOptions(){
+  try {
+    const o = await (await fetch(API_URL + '?action=options&token=' + encodeURIComponent(getToken()))).json();
+    if (!o.ok) return;
+    const fill = (id, list) => $(id).innerHTML = list.map(v => `<option value="${esc(v)}">`).join('');
+    const cur = $('#f_driver').value;
+    $('#f_driver').innerHTML = '<option value="">Pilih driver</option>' + o.drivers.map(v => `<option>${esc(v)}</option>`).join('');
+    if (cur) $('#f_driver').value = cur;
+    fill('#dl_vendor', o.vendors);
+    fill('#dl_pickup', o.pickups);
+    fill('#dl_dropoff', [...new Set([...o.venues, ...o.dropoffs])].sort());
+  } catch (e) {}
+}
+
+function toggleDone(){
+  const done = $('#f_status').value !== 'On Delivery';
+  $$('.done').forEach(l => {
+    l.style.display = done ? '' : 'none';
+    l.querySelector('input').required = done;
+  });
+  if (done && !$('[name=dropoffTime]').value) $('[name=dropoffTime]').value = hm(new Date());
+}
+
+function resetForm(){
+  const f = $('#newForm'), keepDriver = $('#f_driver').value;
+  f.reset();
+  f.date.value = ymd(new Date());
+  f.pickupTime.value = hm(new Date());
+  f.createdBy.value = store('lm_createdBy');
+  if (keepDriver) $('#f_driver').value = keepDriver;
+  $$('.photo-prev').forEach(i => { i.style.display = 'none'; i.removeAttribute('src'); });
+  toggleDone();
+}
+
+function compress(file, max = 1280, q = 0.75){
+  return new Promise((res, rej) => {
+    if (!file) return res('');
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', q));
+    };
+    img.onerror = () => rej(new Error('Foto tidak bisa dibaca'));
+    img.src = url;
+  });
+}
+
+async function submitDelivery(ev){
+  ev.preventDefault();
+  const f = ev.target, btn = $('#submitBtn'), msg = $('#formMsg');
+  btn.disabled = true; btn.textContent = 'Mengirim...';
+  msg.className = 'msg';
+  try {
+    const data = Object.fromEntries(new FormData(f).entries());
+    if (data.status === 'On Delivery') { data.dropoffTime = ''; data.receiver = ''; }
+    data.photos = {};
+    for (const inp of $$('input[data-photo]')) data.photos[inp.dataset.photo] = await compress(inp.files[0]);
+    store('lm_createdBy', data.createdBy);
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ token: getToken(), action: 'create', data })
+    });
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error);
+
+    msg.textContent = 'Delivery tersimpan. System ID: ' + out.systemId;
+    msg.className = 'msg ok';
+    resetForm();
+    load();
+  } catch (err) {
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit Delivery';
+    window.scrollTo(0, 0);
+  }
+}
+
 init();
-setInterval(load, 5 * 60 * 1000); // auto refresh tiap 5 menit
+setInterval(load, 5 * 60 * 1000);
 </script>
 </body>
 </html>
