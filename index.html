@@ -83,6 +83,23 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .photos img{width:100%;border-radius:8px;border:1px solid var(--line);background:#f3f4f6}
 .photos figcaption{font-size:12px;color:var(--muted);margin-top:4px}
 #more{display:block;margin:12px auto 0}
+.cal-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cal-nav b{min-width:120px;text-align:center}
+.cal-nav select{width:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dow{font-size:11px;color:var(--muted);text-align:center;font-weight:600;padding:4px 0}
+.cal .day{min-height:90px;border:1px solid var(--line);border-radius:8px;padding:4px;cursor:pointer;background:#fff;overflow:hidden}
+.cal .day:hover{border-color:var(--brand)}
+.cal .day.out{background:#f9fafb;cursor:default;border-color:transparent}
+.cal .day.today{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
+.cal .num{font-size:12px;font-weight:700}
+.cal .chip{display:block;font-size:10.5px;border-radius:4px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .cnt2{display:none;font-size:11px;color:var(--muted);margin-top:4px}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.s-M1{background:#dbeafe;color:#1d4ed8}.s-M2{background:#ccfbf1;color:#0f766e}.s-A{background:#ffedd5;color:#c2410c}
+.s-N{background:#ede9fe;color:#6d28d9}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
+@media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
 </style>
 </head>
 <body>
@@ -91,7 +108,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   <h1>Nuanu Last Mile<small id="updated">Memuat...</small></h1>
   <div class="user">
     <span id="userEmail"></span>
-    <button class="btn light" onclick="load();loadActive()">Refresh</button>
+    <button class="btn light" onclick="load();loadActive();loadCal()">Refresh</button>
     <button class="btn light" onclick="signOut()">Keluar</button>
   </div>
 </header>
@@ -114,6 +131,20 @@ th{font-size:12px;color:var(--muted);font-weight:600}
       <label>Cari<input type="search" id="q" placeholder="Order ID, nama, lokasi..." oninput="render()"></label>
     </div>
     <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <div class="cal-head">
+        <h2 style="margin:0">Jadwal Driver</h2>
+        <div class="cal-nav">
+          <button class="btn ghost" onclick="calMove(-1)">&lsaquo;</button>
+          <b id="calTitle"></b>
+          <button class="btn ghost" onclick="calMove(1)">&rsaquo;</button>
+          <select id="calDriver" onchange="renderCal()"><option value="">Semua driver</option></select>
+        </div>
+      </div>
+      <div class="muted" id="calToday" style="margin-bottom:10px"></div>
+      <div class="cal" id="cal"></div>
+      <div class="legend" id="calLegend"></div>
+    </div>
     <div class="card">
       <h2>Performa Driver</h2>
       <div class="scroll"><table id="drivers"></table></div>
@@ -327,7 +358,7 @@ function init() {
   $('#userEmail').textContent = tokEmail(t);
   boot();
 }
-function boot() { BOOTED = true; load(); loadOptions(); loadActive(); }
+function boot() { BOOTED = true; load(); loadOptions(); loadActive(); loadCal(); }
 
 async function api(params) {
   const tok = getTok();
@@ -479,6 +510,88 @@ function openDetail(r) {
   $('#detailBody').innerHTML = '<h3>' + typeBadge(r) + esc(r['Order ID'] || r['System ID']) + '</h3>'
     + '<div class="grid">' + fields.map(f => '<div>' + lbl(r, f) + '</div><div>' + esc(r[f] || '-') + '</div>').join('') + '</div>'
     + '<div class="photos">' + photos + '</div>'
+    + '<button class="btn ghost" style="margin-top:14px;width:100%" onclick="document.getElementById(\'detail\').classList.remove(\'show\')">Tutup</button>';
+  $('#detail').classList.add('show');
+}
+
+/* ===== JADWAL DRIVER (KALENDER) ===== */
+const CAL = { y: 0, m: 0, items: [], shifts: {} };
+const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const DOW = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+function shiftCls(s) {
+  const k = String(s || '').trim().toUpperCase();
+  if (/^(OFF|LIBUR|L|CUTI)$/.test(k)) return 's-OFF';
+  return ['M1', 'M2', 'A', 'N'].indexOf(k) >= 0 ? 's-' + k : 's-x';
+}
+const isOff = s => shiftCls(s) === 's-OFF' ? 1 : 0;
+const calSort = (a, b) => isOff(a.shift) - isOff(b.shift) || a.shift.localeCompare(b.shift) || a.driver.localeCompare(b.driver);
+
+async function loadCal() {
+  if (!CAL.y) { const t = new Date(); CAL.y = t.getFullYear(); CAL.m = t.getMonth(); }
+  $('#calTitle').textContent = MONTHS[CAL.m] + ' ' + CAL.y;
+  try {
+    const data = await api({ action: 'schedule', month: CAL.y + '-' + pad(CAL.m + 1) });
+    if (!data.ok) {
+      if (data.error !== 'unauthorized') $('#cal').innerHTML = '<p class="muted" style="grid-column:1/-1">' + esc(data.error) + '</p>';
+      return;
+    }
+    CAL.items = data.items;
+    CAL.shifts = data.shifts || {};
+    const drivers = [...new Set(CAL.items.map(x => x.driver))].sort();
+    const sel = $('#calDriver'), cur = sel.value;
+    sel.innerHTML = '<option value="">Semua driver</option>' + drivers.map(d => '<option>' + esc(d) + '</option>').join('');
+    if (drivers.includes(cur)) sel.value = cur;
+    renderCal();
+  } catch (e) {
+    $('#cal').innerHTML = '<p class="muted" style="grid-column:1/-1">Gagal memuat jadwal.</p>';
+  }
+}
+function calMove(n) {
+  CAL.m += n;
+  if (CAL.m < 0) { CAL.m = 11; CAL.y--; }
+  if (CAL.m > 11) { CAL.m = 0; CAL.y++; }
+  loadCal();
+}
+function renderCal() {
+  const drv = $('#calDriver').value;
+  const byDate = {};
+  CAL.items.filter(x => !drv || x.driver === drv).forEach(x => { (byDate[x.date] = byDate[x.date] || []).push(x); });
+  const days = new Date(CAL.y, CAL.m + 1, 0).getDate();
+  const lead = (new Date(CAL.y, CAL.m, 1).getDay() + 6) % 7;
+  const today = ymd(new Date());
+  let html = DOW.map(d => '<div class="dow">' + d + '</div>').join('');
+  for (let i = 0; i < lead; i++) html += '<div class="day out"></div>';
+  for (let d = 1; d <= days; d++) {
+    const key = CAL.y + '-' + pad(CAL.m + 1) + '-' + pad(d);
+    const list = (byDate[key] || []).slice().sort(calSort);
+    const on = list.filter(x => !isOff(x.shift)).length;
+    html += '<div class="day' + (key === today ? ' today' : '') + '" onclick="openDay(\'' + key + '\')">'
+      + '<div class="num">' + d + '</div>'
+      + list.map(x => '<span class="chip ' + shiftCls(x.shift) + '">' + esc(x.shift) + ' ' + esc(x.driver) + '</span>').join('')
+      + (list.length ? '<div class="cnt2">' + on + ' on duty</div>' : '')
+      + '</div>';
+  }
+  const tail = (7 - (lead + days) % 7) % 7;
+  for (let i = 0; i < tail; i++) html += '<div class="day out"></div>';
+  $('#cal').innerHTML = html;
+
+  const codes = [...new Set(CAL.items.map(x => x.shift))].filter(Boolean).sort();
+  $('#calLegend').innerHTML = codes.map(c => '<span class="badge ' + shiftCls(c) + '">' + esc(c) + (CAL.shifts[c] ? ' · ' + esc(CAL.shifts[c]) : '') + '</span>').join('');
+
+  const inMonth = today.slice(0, 7) === CAL.y + '-' + pad(CAL.m + 1);
+  const tl = CAL.items.filter(x => x.date === today && !isOff(x.shift)).sort(calSort);
+  $('#calToday').textContent = !inMonth ? '' : (tl.length
+    ? 'Hari ini on duty: ' + tl.map(x => x.driver + ' (' + x.shift + ')').join(', ')
+    : 'Belum ada jadwal untuk hari ini.');
+}
+function openDay(key) {
+  const list = CAL.items.filter(x => x.date === key).sort(calSort);
+  const d = new Date(key + 'T00:00:00');
+  $('#detailBody').innerHTML = '<h3>Jadwal ' + DOW[(d.getDay() + 6) % 7] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + '</h3>'
+    + (list.length
+      ? '<table><tr><th>Driver</th><th>Shift</th><th>Jam</th></tr>' + list.map(x =>
+          '<tr><td>' + esc(x.driver) + '</td><td><span class="badge ' + shiftCls(x.shift) + '">' + esc(x.shift) + '</span></td><td>' + esc(CAL.shifts[x.shift] || '') + '</td></tr>').join('') + '</table>'
+      : '<p class="muted">Belum ada jadwal.</p>')
     + '<button class="btn ghost" style="margin-top:14px;width:100%" onclick="document.getElementById(\'detail\').classList.remove(\'show\')">Tutup</button>';
   $('#detail').classList.add('show');
 }
