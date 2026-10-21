@@ -136,12 +136,12 @@ th{font-size:12px;color:var(--muted);font-weight:600}
       </div>
       <div class="form-grid">
         <label><span class="req">Date</span><input type="date" name="date" required></label>
-        <label><span class="req">Driver / Rider</span><select name="driver" id="f_driver" required><option value="">Pilih driver</option></select></label>
       </div>
 
       <fieldset id="fs-delivery">
         <h2 style="margin-top:18px">Order</h2>
         <div class="form-grid">
+          <label><span class="req">Driver Last Mile</span><select name="driver" id="f_driver" required><option value="">Pilih driver</option></select></label>
           <label>Order ID<input name="orderId" placeholder="Nomor order"></label>
           <label><span class="req">Customer Name</span><input name="customer" required></label>
           <label><span class="req">Vendor</span><input name="vendor" list="dl_vendor" required placeholder="Gojek, Grab, GoFood..."></label>
@@ -176,6 +176,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
           <label class="full"><span class="req">Items (foto barang diterima)</span><input type="file" accept="image/*" capture="environment" id="f_items" required><img class="photo-prev" id="prev_items"></label>
           <label class="full">Note<textarea name="note"></textarea></label>
         </div>
+        <p class="muted">Driver tidak dipilih di sini. Nama driver tercatat otomatis dari akun yang mengirim POD.</p>
       </fieldset>
 
       <p class="muted" style="margin-top:14px">Status otomatis <b id="statusInfo">On Delivery</b> setelah submit. Created by terisi otomatis dari email login Anda.</p>
@@ -222,6 +223,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     <form id="finForm" onsubmit="submitFin(event)">
       <label id="finReasonWrap"><span class="req">Alasan Rejected</span><textarea id="finReason" placeholder="Contoh: penerima tidak ditemukan, alamat salah..."></textarea></label>
       <label style="margin-top:12px"><span id="finPhotoLbl">Foto POD</span><input type="file" accept="image/*" capture="environment" id="finPhoto"><img class="photo-prev" id="prev_fin"></label>
+      <p class="muted" id="finDriverInfo" style="margin-top:10px">Driver tercatat otomatis dari akun yang login.</p>
       <label id="finReceiverWrap" style="margin-top:12px"><span class="req">Nama Penerima</span><input id="finReceiver"></label>
       <div class="msg" id="finMsg" style="margin-top:12px"></div>
       <button class="btn" id="finBtn" style="margin-top:14px;width:100%;padding:12px"></button>
@@ -601,7 +603,7 @@ function startDate(r) {
 function renderActive() {
   $('#activeCnt').textContent = ACTIVE.length;
   const drv = $('#a_driver').value, ty = $('#a_type').value;
-  VIS = ACTIVE.filter(r => (!drv || r['Driver Last Mile'] === drv) && (!ty || r.Type === ty))
+  VIS = ACTIVE.filter(r => (!drv || r['Driver Last Mile'] === drv || (r.Type === 'Expedition' && !r['Driver Last Mile'])) && (!ty || r.Type === ty))
     .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
   const html = VIS.map((r, i) => {
     const isExp = r.Type === 'Expedition';
@@ -610,7 +612,7 @@ function renderActive() {
     const el = (min == null || isExp) ? '<span></span>'
       : '<span class="elapsed' + (min >= 30 ? ' long' : '') + '">' + min + ' menit</span>';
     const cod = (isExp && /cod/i.test(r['Payment'] || '')) ? '<div class="s cod">COD ' + rp(r['Order Value']) + '</div>' : '';
-    const sub = esc(r['Order ID'] || r['System ID']) + ' · ' + esc(r['Vendor']) + ' · ' + esc(r['Driver Last Mile']);
+    const sub = esc(r['Order ID'] || r['System ID']) + ' · ' + esc(r['Vendor']) + ' · ' + esc(r['Driver Last Mile'] || (isExp ? 'Driver belum di-assign' : ''));
     const when = isExp ? '<span class="badge b-stored">Stored</span> Received ' + esc(String(r['Pickup Time'] || '').slice(0, 16))
       : 'Pickup ' + esc(r['Pickup']) + ' ' + esc(timeOf(r['Pickup Time']));
     const note = r['Note'] ? ' · ' + esc(r['Note']) : '';
@@ -641,6 +643,7 @@ function openFin(i, result) {
   $('#finPhotoLbl').textContent = del ? 'Foto POD' : 'Foto (opsional)';
   $('#finPhotoLbl').classList.toggle('req', del);
   $('#finPhoto').required = del;
+  $('#finDriverInfo').style.display = r.Type === 'Expedition' ? '' : 'none';
   $('#finReceiverWrap').style.display = needReceiver ? '' : 'none';
   $('#finReceiver').required = needReceiver;
   $('#finReceiver').value = r['Customer Name'] || '';
@@ -649,7 +652,7 @@ function openFin(i, result) {
   const cod = (r.Type === 'Expedition' && /cod/i.test(r['Payment'] || ''))
     ? '<br><span class="cod">COD ' + rp(r['Order Value']) + ', tagih ke penerima</span>' : '';
   $('#finInfo').innerHTML = typeBadge(r) + '<b>' + esc(r['Customer Name']) + '</b> → ' + esc(r['Dropoff']) + '<br>'
-    + esc(r['Order ID'] || r['System ID']) + ' · ' + esc(r['Driver Last Mile']) + cod;
+    + esc(r['Order ID'] || r['System ID']) + (r['Driver Last Mile'] ? ' · ' + esc(r['Driver Last Mile']) : '') + cod;
   $('#fin').classList.add('show');
 }
 function closeFin() { $('#fin').classList.remove('show'); FIN = null; }
