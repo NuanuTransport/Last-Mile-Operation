@@ -11,13 +11,15 @@ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;b
 header{background:var(--brand);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 header h1{font-size:17px;margin:0}
 header small{display:block;font-size:12px;opacity:.85;font-weight:400}
-nav{background:#fff;border-bottom:1px solid var(--line);display:flex;padding:0 16px;position:sticky;top:0;z-index:5}
-nav button{background:none;border:0;padding:12px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+nav{background:#fff;border-bottom:1px solid var(--line);display:flex;padding:0 8px;position:sticky;top:0;z-index:5;overflow-x:auto}
+nav button{background:none;border:0;padding:12px 12px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 nav button.active{color:var(--brand);border-bottom-color:var(--brand)}
+nav .cnt{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;background:var(--info);color:#fff;font-size:11px;margin-left:4px}
 main{max-width:1100px;margin:0 auto;padding:16px}
 .tab{display:none}.tab.active{display:block}
 .btn{border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
 .btn.light{background:rgba(255,255,255,.2)}
+.btn.ghost{background:#eef2f7;color:var(--text)}
 .btn:disabled{opacity:.6;cursor:wait}
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
 label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
@@ -38,6 +40,12 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .order .t{font-weight:600}
 .order .s{font-size:12px;color:var(--muted);margin-top:2px}
 .order .r{text-align:right;flex-shrink:0}
+.job{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+.job .t{font-weight:700;font-size:15px}
+.job .s{font-size:13px;color:var(--muted);margin-top:3px}
+.job .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+.elapsed{font-weight:700;color:var(--info)}
+.elapsed.long{color:var(--warn)}
 .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#eef2f7;color:var(--muted)}
 .b-delivered{background:#dcfce7;color:var(--ok)}
 .b-ondelivery{background:#dbeafe;color:var(--info)}
@@ -48,7 +56,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .form-grid .full{grid-column:1/-1}
 .req::after{content:" *";color:var(--bad)}
-.photo-prev{width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:none;margin-top:4px}
+.photo-prev{width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:none;margin-top:4px}
 .msg{padding:10px 12px;border-radius:8px;margin-bottom:12px;display:none;font-weight:600}
 .msg.ok{display:block;background:#dcfce7;color:var(--ok)}
 .msg.err{display:block;background:#fee2e2;color:var(--bad)}
@@ -69,12 +77,13 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 
 <header>
   <h1>Nuanu Last Mile<small id="updated">Memuat...</small></h1>
-  <button class="btn light" onclick="load()">Refresh</button>
+  <button class="btn light" onclick="load();loadActive()">Refresh</button>
 </header>
 
 <nav>
   <button class="active" data-tab="dash" onclick="showTab('dash')">Dashboard</button>
   <button data-tab="new" onclick="showTab('new')">Delivery Baru</button>
+  <button data-tab="active" onclick="showTab('active')">On Delivery<span class="cnt" id="activeCnt">0</span></button>
 </nav>
 
 <main>
@@ -136,19 +145,22 @@ th{font-size:12px;color:var(--muted);font-weight:600}
           <img class="photo-prev" id="prev_sealing"></label>
       </div>
 
-      <h2 style="margin-top:18px">Status</h2>
-      <div class="form-grid">
-        <label><span class="req">Status</span>
-          <select name="status" id="f_status" onchange="toggleDone()">
-            <option>On Delivery</option><option>Delivered</option><option>Rejected</option>
-          </select></label>
-        <label class="done"><span class="req">Dropoff Time</span><input type="time" name="dropoffTime"></label>
-        <label class="done"><span class="req">Receiver</span><input name="receiver"></label>
+      <div class="form-grid" style="margin-top:18px">
         <label><span class="req">Created by</span><input name="createdBy" id="f_createdBy" required></label>
       </div>
+      <p class="muted">Status otomatis <b>On Delivery</b> setelah submit.</p>
 
-      <button class="btn" id="submitBtn" style="margin-top:18px;width:100%;padding:12px">Submit Delivery</button>
+      <button class="btn" id="submitBtn" style="margin-top:6px;width:100%;padding:12px">Submit Delivery</button>
     </form>
+  </div>
+
+  <!-- ============ ON DELIVERY ============ -->
+  <div class="tab" id="tab-active">
+    <div class="msg" id="activeMsg"></div>
+    <div class="filters">
+      <label>Driver<select id="a_driver" onchange="store('lm_activeDriver', this.value);renderActive()"><option value="">Semua driver</option></select></label>
+    </div>
+    <div id="activeList"><p class="muted">Memuat...</p></div>
   </div>
 </main>
 
@@ -171,13 +183,32 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   <div class="modal" id="detailBody"></div>
 </div>
 
-<script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbx6avUa09ERSduGblR-lDsfbggJs6AvAhV336jaUy92I1LIJzCUvOoRnZzEEseE6MoI/exec';
-const APPSHEET_APP = '';      // opsional: nama app AppSheet, untuk menampilkan foto lama
-const PHOTO_TABLE = 'Delivery';
-const PAGE = 100;
+<!-- Proof of Delivery -->
+<div class="overlay" id="pod" onclick="if(event.target===this)closePod()">
+  <div class="modal" style="max-width:440px">
+    <h3>Proof of Delivery</h3>
+    <div id="podInfo" class="muted" style="margin-bottom:12px"></div>
+    <form id="podForm" onsubmit="submitPod(event)">
+      <label><span class="req">Foto POD</span>
+        <input type="file" accept="image/*" capture="environment" id="podPhoto" required>
+        <img class="photo-prev" id="prev_pod"></label>
+      <label style="margin-top:12px"><span class="req">Nama Penerima</span>
+        <input id="podReceiver" required></label>
+      <div class="msg" id="podMsg" style="margin-top:12px"></div>
+      <button class="btn" id="podBtn" style="margin-top:14px;width:100%;padding:12px">Kirim & Set Delivered</button>
+      <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closePod()">Batal</button>
+    </form>
+  </div>
+</div>
 
-let ROWS = [], FILTERED = [], shown = PAGE;
+<script>
+const API_URL = 'PASTE_URL_EXEC_DI_SINI';
+const APPSHEET_APP = '';
+const PHOTO_TABLE = 'Job';
+const PAGE = 100;
+const PHOTO_COLS = ['Booking Photo','Handover','Sealing','POD Photo'];
+
+let ROWS = [], FILTERED = [], ACTIVE = [], shown = PAGE, podId = '';
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -187,12 +218,20 @@ const hm = d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes
 function store(k, v){ try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch(e){ return ''; } }
 function getToken(){ return store('lm_token') || window._tk || ''; }
 function setToken(t){ window._tk = t; store('lm_token', t); }
-function saveToken(){ setToken($('#pin').value.trim()); $('#login').classList.remove('show'); load(); loadOptions(); }
+function saveToken(){ setToken($('#pin').value.trim()); $('#login').classList.remove('show'); boot(); }
 
 function showTab(t){
   $$('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   $$('.tab').forEach(x => x.classList.toggle('active', x.id === 'tab-' + t));
+  if (t === 'active') loadActive();
   window.scrollTo(0, 0);
+}
+
+function previewOn(input, img){
+  input.addEventListener('change', () => {
+    const f = input.files[0];
+    if (f) { img.src = URL.createObjectURL(f); img.style.display = 'block'; } else { img.style.display = 'none'; }
+  });
 }
 
 function init(){
@@ -201,28 +240,36 @@ function init(){
   $('#from').value = ymd(start);
   $('#to').value = ymd(today);
   resetForm();
-  $$('input[data-photo]').forEach(inp => inp.addEventListener('change', () => {
-    const f = inp.files[0], img = $('#prev_' + inp.dataset.photo);
-    if (f) { img.src = URL.createObjectURL(f); img.style.display = 'block'; } else { img.style.display = 'none'; }
-  }));
+  $$('input[data-photo]').forEach(inp => previewOn(inp, $('#prev_' + inp.dataset.photo)));
+  previewOn($('#podPhoto'), $('#prev_pod'));
   if (!getToken()) { $('#login').classList.add('show'); return; }
-  load(); loadOptions();
+  boot();
+}
+function boot(){ load(); loadOptions(); loadActive(); }
+
+async function api(params){
+  const qs = Object.entries(Object.assign({ token: getToken() }, params))
+    .map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&');
+  const data = await (await fetch(API_URL + '?' + qs)).json();
+  if (!data.ok && data.error === 'unauthorized') {
+    $('#loginMsg').textContent = 'PIN salah, coba lagi.';
+    $('#login').classList.add('show');
+  }
+  return data;
+}
+async function post(action, data){
+  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ token: getToken(), action, data }) });
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error);
+  return out;
 }
 
 /* ================= DASHBOARD ================= */
 async function load(){
   $('#updated').textContent = 'Memuat...';
   try {
-    const url = API_URL + '?token=' + encodeURIComponent(getToken())
-      + '&from=' + $('#from').value + '&to=' + $('#to').value;
-    const data = await (await fetch(url)).json();
-    if (!data.ok) {
-      if (data.error === 'unauthorized') {
-        $('#loginMsg').textContent = 'PIN salah, coba lagi.';
-        $('#login').classList.add('show');
-      } else $('#updated').textContent = 'Error: ' + data.error;
-      return;
-    }
+    const data = await api({ from: $('#from').value, to: $('#to').value });
+    if (!data.ok) { if (data.error !== 'unauthorized') $('#updated').textContent = 'Error: ' + data.error; return; }
     ROWS = data.rows;
     $('#updated').textContent = 'Update ' + data.updated + ' WITA';
     fillOptions('#driver', 'Driver Last Mile');
@@ -260,6 +307,7 @@ const avgDur = list => {
   const d = list.map(r => secs(r['Duration'])).filter(v => v != null);
   return d.length ? fmtDur(d.reduce((a,b) => a+b, 0) / d.length) : '-';
 };
+const timeOf = s => { const m = String(s || '').match(/(\d{1,2}):(\d{2})(?!.*\d{1,2}:\d{2})/); return m ? m[1].padStart(2,'0') + ':' + m[2] : ''; };
 
 function render(){
   const drv = $('#driver').value, st = $('#status').value, q = $('#q').value.trim().toLowerCase();
@@ -268,7 +316,7 @@ function render(){
     (!st || r['Status'] === st) &&
     (!q || ['Order ID','Customer Name','Dropoff','Vendor','Receiver','No Vendor']
             .some(k => String(r[k] || '').toLowerCase().includes(q)))
-  ).sort((a,b) => (String(b['Date']) + b['Pickup Time']).localeCompare(String(a['Date']) + a['Pickup Time']));
+  ).sort((a,b) => (String(b['Date']) + timeOf(b['Pickup Time'])).localeCompare(String(a['Date']) + timeOf(a['Pickup Time'])));
   shown = PAGE;
   renderKpis(); renderDrivers(); renderOrders();
 }
@@ -303,11 +351,11 @@ function renderDrivers(){
 function renderOrders(){
   $('#count').textContent = '(' + FILTERED.length + ')';
   $('#orders').innerHTML = FILTERED.slice(0, shown).map((r, i) => `
-    <div class="order" onclick="openDetail(${i})">
+    <div class="order" onclick="openDetail(FILTERED[${i}])">
       <div>
         <div class="t">${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Customer Name'])}</div>
         <div class="s">${esc(r['Vendor'])} → ${esc(r['Dropoff'])}</div>
-        <div class="s">${esc(r['Driver Last Mile'])} · ${esc(r['Date'])} ${esc(r['Pickup Time'])}</div>
+        <div class="s">${esc(r['Driver Last Mile'])} · ${esc(r['Date'])} ${esc(timeOf(r['Pickup Time']))}</div>
       </div>
       <div class="r">
         <span class="badge ${statusKey(r['Status'])}">${esc(r['Status'] || '-')}</span><br>
@@ -327,11 +375,10 @@ function photoUrl(v){
   return '';
 }
 
-function openDetail(i){
-  const r = FILTERED[i];
+function openDetail(r){
   const fields = ['System ID','Order ID','Date','Driver Last Mile','Customer Name','Vendor','No Vendor','Order Value',
     'Pickup','Pickup Time','Dropoff','Dropoff Time','Receiver','Status','Duration','On Time / Late','SLA Check','Note','Created by'];
-  const photos = ['Booking Photo','Handover','Sealing'].map(k => {
+  const photos = PHOTO_COLS.map(k => {
     const u = photoUrl(r[k]);
     if (u) return `<figure><a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="${k}" loading="lazy"></a><figcaption>${k}</figcaption></figure>`;
     return r[k] ? `<figure><figcaption>${k}: ${esc(r[k])}</figcaption></figure>` : '';
@@ -340,96 +387,12 @@ function openDetail(i){
     <h3>${esc(r['Order ID'] || r['System ID'])}</h3>
     <div class="grid">${fields.map(f => `<div>${f}</div><div>${esc(r[f] || '-')}</div>`).join('')}</div>
     <div class="photos">${photos}</div>
-    <button class="btn" style="margin-top:14px;width:100%" onclick="$('#detail').classList.remove('show')">Tutup</button>`;
+    <button class="btn ghost" style="margin-top:14px;width:100%" onclick="$('#detail').classList.remove('show')">Tutup</button>`;
   $('#detail').classList.add('show');
 }
 
 /* ================= DELIVERY BARU ================= */
 async function loadOptions(){
   try {
-    const o = await (await fetch(API_URL + '?action=options&token=' + encodeURIComponent(getToken()))).json();
+    const o = await api({ action: 'options' });
     if (!o.ok) return;
-    const fill = (id, list) => $(id).innerHTML = list.map(v => `<option value="${esc(v)}">`).join('');
-    const cur = $('#f_driver').value;
-    $('#f_driver').innerHTML = '<option value="">Pilih driver</option>' + o.drivers.map(v => `<option>${esc(v)}</option>`).join('');
-    if (cur) $('#f_driver').value = cur;
-    fill('#dl_vendor', o.vendors);
-    fill('#dl_pickup', o.pickups);
-    fill('#dl_dropoff', [...new Set([...o.venues, ...o.dropoffs])].sort());
-  } catch (e) {}
-}
-
-function toggleDone(){
-  const done = $('#f_status').value !== 'On Delivery';
-  $$('.done').forEach(l => {
-    l.style.display = done ? '' : 'none';
-    l.querySelector('input').required = done;
-  });
-  if (done && !$('[name=dropoffTime]').value) $('[name=dropoffTime]').value = hm(new Date());
-}
-
-function resetForm(){
-  const f = $('#newForm'), keepDriver = $('#f_driver').value;
-  f.reset();
-  f.date.value = ymd(new Date());
-  f.pickupTime.value = hm(new Date());
-  f.createdBy.value = store('lm_createdBy');
-  if (keepDriver) $('#f_driver').value = keepDriver;
-  $$('.photo-prev').forEach(i => { i.style.display = 'none'; i.removeAttribute('src'); });
-  toggleDone();
-}
-
-function compress(file, max = 1280, q = 0.75){
-  return new Promise((res, rej) => {
-    if (!file) return res('');
-    const img = new Image(), url = URL.createObjectURL(file);
-    img.onload = () => {
-      const s = Math.min(1, max / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
-      res(c.toDataURL('image/jpeg', q));
-    };
-    img.onerror = () => rej(new Error('Foto tidak bisa dibaca'));
-    img.src = url;
-  });
-}
-
-async function submitDelivery(ev){
-  ev.preventDefault();
-  const f = ev.target, btn = $('#submitBtn'), msg = $('#formMsg');
-  btn.disabled = true; btn.textContent = 'Mengirim...';
-  msg.className = 'msg';
-  try {
-    const data = Object.fromEntries(new FormData(f).entries());
-    if (data.status === 'On Delivery') { data.dropoffTime = ''; data.receiver = ''; }
-    data.photos = {};
-    for (const inp of $$('input[data-photo]')) data.photos[inp.dataset.photo] = await compress(inp.files[0]);
-    store('lm_createdBy', data.createdBy);
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ token: getToken(), action: 'create', data })
-    });
-    const out = await res.json();
-    if (!out.ok) throw new Error(out.error);
-
-    msg.textContent = 'Delivery tersimpan. System ID: ' + out.systemId;
-    msg.className = 'msg ok';
-    resetForm();
-    load();
-  } catch (err) {
-    msg.textContent = 'Gagal menyimpan: ' + err.message;
-    msg.className = 'msg err';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Submit Delivery';
-    window.scrollTo(0, 0);
-  }
-}
-
-init();
-setInterval(load, 5 * 60 * 1000);
-</script>
-</body>
-</html>
