@@ -98,6 +98,15 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .cal .cnt2{display:none;font-size:11px;color:var(--muted);margin-top:4px}
 .legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .s-M,.s-M1{background:#dbeafe;color:#1d4ed8}.s-M2{background:#ccfbf1;color:#0f766e}.s-A{background:#ffedd5;color:#c2410c}
+.pay-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.pay{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.pay .l{font-size:12px;color:var(--muted);font-weight:600}
+.pay .v{font-size:18px;font-weight:700;margin-top:4px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+.two .card{margin-bottom:0}
+.total-line{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-weight:700}
+tfoot td{font-weight:700;border-top:2px solid var(--line)}
+.b-sale{background:#dcfce7;color:var(--ok)}.b-restock{background:#dbeafe;color:var(--info)}
 .s-N{background:#ede9fe;color:#6d28d9}.s-MID{background:#ccfbf1;color:#0f766e}.s-EO{background:#fce7f3;color:#be185d}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
 @media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
 </style>
@@ -108,7 +117,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   <h1>Nuanu Last Mile<small id="updated">Memuat...</small></h1>
   <div class="user">
     <span id="userEmail"></span>
-    <button class="btn light" onclick="load();loadActive();loadCal()">Refresh</button>
+    <button class="btn light" onclick="refreshAll()">Refresh</button>
     <button class="btn light" onclick="signOut()">Keluar</button>
   </div>
 </header>
@@ -117,6 +126,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   <button class="active" data-tab="dash" onclick="showTab('dash')">Dashboard</button>
   <button data-tab="new" onclick="showTab('new')">Delivery Baru</button>
   <button data-tab="active" onclick="showTab('active')">Order Aktif<span class="cnt" id="activeCnt">0</span></button>
+  <button data-tab="water" onclick="showTab('water')">Air Mineral</button>
 </nav>
 
 <main>
@@ -223,6 +233,61 @@ th{font-size:12px;color:var(--muted);font-weight:600}
       <label>Type<select id="a_type" onchange="renderActive()"><option value="">Semua</option><option>Delivery</option><option>Expedition</option></select></label>
     </div>
     <div id="activeList"><p class="muted">Memuat...</p></div>
+  </div>
+
+  <!-- AIR MINERAL -->
+  <div class="tab" id="tab-water">
+    <div class="msg" id="waterMsg"></div>
+    <div class="filters">
+      <label>Dari<input type="date" id="w_from" onchange="loadWater()"></label>
+      <label>Sampai<input type="date" id="w_to" onchange="loadWater()"></label>
+    </div>
+    <div class="kpis" id="w_kpis"></div>
+
+    <div class="card">
+      <h2>Penjualan per Metode Bayar</h2>
+      <div class="pay-grid" id="w_pay"></div>
+    </div>
+
+    <div class="two">
+      <form class="card" onsubmit="submitWaterSale(event)">
+        <h2>Input Penjualan</h2>
+        <div class="form-grid">
+          <label><span class="req">Tanggal</span><input type="date" id="ws_date" required></label>
+          <label><span class="req">Qty (botol)</span><input type="number" id="ws_qty" min="1" step="1" inputmode="numeric" required oninput="wsTotal()"></label>
+          <label><span class="req">Harga / botol (Rp)</span><input type="number" id="ws_price" min="0" step="1" inputmode="numeric" required oninput="wsTotal()"></label>
+        </div>
+        <label style="margin-top:12px"><span class="req">Pembayaran</span></label>
+        <div class="seg" id="ws_pay" style="margin-top:4px"></div>
+        <input type="hidden" id="ws_payment" value="Cash">
+        <label>Catatan<input id="ws_notes" placeholder="Opsional"></label>
+        <div class="total-line"><span>Total</span><span id="ws_total">Rp 0</span></div>
+        <button class="btn" id="ws_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Penjualan</button>
+      </form>
+
+      <form class="card" onsubmit="submitWaterRestock(event)">
+        <h2>Input Restock</h2>
+        <div class="form-grid">
+          <label><span class="req">Tanggal</span><input type="date" id="wr_date" required></label>
+          <label><span class="req">Qty (botol)</span><input type="number" id="wr_qty" min="1" step="1" inputmode="numeric" required oninput="wrTotal()"></label>
+          <label><span class="req">Harga beli / botol (Rp)</span><input type="number" id="wr_cost" min="0" step="1" inputmode="numeric" required oninput="wrTotal()"></label>
+          <label>Harga jual / botol (Rp)<input type="number" id="wr_price" min="0" step="1" inputmode="numeric"></label>
+        </div>
+        <label style="margin-top:12px">Catatan<input id="wr_notes" placeholder="Opsional, mis. supplier"></label>
+        <div class="total-line"><span>Total biaya</span><span id="wr_total">Rp 0</span></div>
+        <button class="btn" id="wr_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Restock</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Rekap Harian</h2>
+      <div class="scroll"><table id="w_daily"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Riwayat Transaksi <span class="muted">(50 terbaru)</span></h2>
+      <div class="scroll"><table id="w_list"></table></div>
+    </div>
   </div>
 </main>
 
@@ -333,6 +398,7 @@ function showTab(t) {
   $$('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   $$('.tab').forEach(x => x.classList.toggle('active', x.id === 'tab-' + t));
   if (t === 'active') loadActive();
+  if (t === 'water') loadWater();
   window.scrollTo(0, 0);
 }
 
@@ -353,6 +419,7 @@ function init() {
   $$('input[data-photo]').forEach(inp => previewOn(inp, $('#prev_' + inp.dataset.photo)));
   previewOn($('#f_items'), $('#prev_items'));
   previewOn($('#finPhoto'), $('#prev_fin'));
+  initWater();
   const t = getTok();
   if (!t) { showLogin(); return; }
   $('#userEmail').textContent = tokEmail(t);
@@ -594,6 +661,135 @@ function openDay(key) {
       : '<p class="muted">Belum ada jadwal.</p>')
     + '<button class="btn ghost" style="margin-top:14px;width:100%" onclick="document.getElementById(\'detail\').classList.remove(\'show\')">Tutup</button>';
   $('#detail').classList.add('show');
+}
+
+/* ===== AIR MINERAL ===== */
+const PAYS = ['Cash', 'Card', 'QRIS', 'Transfer'];
+let WATER = { sales: [], refills: [], stock: 0, lastPrice: 0, lastCost: 0 };
+const rpn = n => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
+const payKey = p => PAYS.find(x => x.toUpperCase() === String(p || '').trim().toUpperCase()) || 'Lainnya';
+
+function refreshAll() {
+  load(); loadActive(); loadCal();
+  if ($('#tab-water').classList.contains('active')) loadWater();
+}
+function initWater() {
+  const t = new Date();
+  $('#w_from').value = ymd(new Date(t.getFullYear(), t.getMonth(), 1));
+  $('#w_to').value = ymd(t);
+  $('#ws_date').value = ymd(t);
+  $('#wr_date').value = ymd(t);
+  $('#ws_pay').innerHTML = PAYS.map(p => '<button type="button" data-pay="' + p + '" onclick="setPay(\'' + p + '\')">' + p + '</button>').join('');
+  setPay('Cash');
+}
+function setPay(p) {
+  $('#ws_payment').value = p;
+  $$('#ws_pay button').forEach(b => b.classList.toggle('active', b.dataset.pay === p));
+}
+function wsTotal() { $('#ws_total').textContent = rpn((Number($('#ws_qty').value) || 0) * (Number($('#ws_price').value) || 0)); }
+function wrTotal() { $('#wr_total').textContent = rpn((Number($('#wr_qty').value) || 0) * (Number($('#wr_cost').value) || 0)); }
+function waterMsg(text, cls) { $('#waterMsg').textContent = text; $('#waterMsg').className = 'msg ' + cls; }
+
+async function loadWater() {
+  try {
+    const d = await api({ action: 'water', from: $('#w_from').value, to: $('#w_to').value });
+    if (!d.ok) { if (d.error !== 'unauthorized') waterMsg('Error: ' + d.error, 'err'); return; }
+    WATER = d;
+    if (!$('#ws_price').value && d.lastPrice) { $('#ws_price').value = d.lastPrice; wsTotal(); }
+    if (!$('#wr_price').value && d.lastPrice) $('#wr_price').value = d.lastPrice;
+    if (!$('#wr_cost').value && d.lastCost) { $('#wr_cost').value = d.lastCost; wrTotal(); }
+    renderWater();
+  } catch (e) {
+    waterMsg('Gagal memuat data air mineral', 'err');
+  }
+}
+
+function renderWater() {
+  const S = WATER.sales || [], R = WATER.refills || [];
+  const sum = (a, f) => a.reduce((x, o) => x + (Number(f(o)) || 0), 0);
+  const rev = sum(S, o => o.total), sold = sum(S, o => o.qty);
+  const rq = sum(R, o => o.qty), rc = sum(R, o => o.qty * o.cost);
+  const k = [
+    ['Total Penjualan', rpn(rev)],
+    ['Botol Terjual', sold.toLocaleString('id-ID')],
+    ['Transaksi', S.length],
+    ['Restock (botol)', rq.toLocaleString('id-ID')],
+    ['Biaya Restock', rpn(rc)],
+    ['Stok Tersedia', Number(WATER.stock || 0).toLocaleString('id-ID') + ' botol']
+  ];
+  $('#w_kpis').innerHTML = k.map(x => '<div class="kpi"><div class="l">' + x[0] + '</div><div class="v">' + x[1] + '</div></div>').join('');
+
+  const groups = PAYS.concat(S.some(o => payKey(o.payment) === 'Lainnya') ? ['Lainnya'] : []);
+  $('#w_pay').innerHTML = groups.map(p => {
+    const L = S.filter(o => payKey(o.payment) === p);
+    const tot = sum(L, o => o.total);
+    return '<div class="pay"><div class="l">' + p + '</div><div class="v">' + rpn(tot) + '</div>'
+      + '<div class="muted">' + L.length + ' transaksi · ' + sum(L, o => o.qty) + ' botol · ' + (rev ? (tot / rev * 100).toFixed(0) : 0) + '%</div></div>';
+  }).join('');
+
+  const days = {};
+  S.forEach(o => {
+    const d = days[o.date] = days[o.date] || { qty: 0, total: 0 };
+    d.qty += o.qty; d.total += o.total;
+    const pk = payKey(o.payment); d[pk] = (d[pk] || 0) + o.total;
+  });
+  const dk = Object.keys(days).sort().reverse();
+  const tot = { qty: sold, total: rev };
+  PAYS.forEach(p => { tot[p] = sum(S.filter(o => payKey(o.payment) === p), o => o.total); });
+  $('#w_daily').innerHTML = '<thead><tr><th>Tanggal</th><th>Botol</th>' + PAYS.map(p => '<th>' + p + '</th>').join('') + '<th>Total</th></tr></thead>'
+    + '<tbody>' + (dk.map(d => '<tr><td>' + esc(d) + '</td><td>' + days[d].qty + '</td>' + PAYS.map(p => '<td>' + (days[d][p] ? rpn(days[d][p]) : '-') + '</td>').join('') + '<td><b>' + rpn(days[d].total) + '</b></td></tr>').join('')
+      || '<tr><td colspan="7" class="muted">Belum ada penjualan di periode ini</td></tr>') + '</tbody>'
+    + (dk.length ? '<tfoot><tr><td>Total</td><td>' + tot.qty + '</td>' + PAYS.map(p => '<td>' + rpn(tot[p]) + '</td>').join('') + '<td>' + rpn(tot.total) + '</td></tr></tfoot>' : '');
+
+  const items = S.map(o => Object.assign({ kind: 'Jual' }, o)).concat(R.map(o => Object.assign({ kind: 'Restock' }, o)))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id))).slice(0, 50);
+  $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th></tr>'
+    + (items.map(o => {
+      const sale = o.kind === 'Jual';
+      return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + (sale ? 'b-sale' : 'b-restock') + '">' + o.kind + '</span></td>'
+        + '<td>' + o.qty + '</td><td>' + rpn(sale ? o.price : o.cost) + '</td><td>' + rpn(sale ? o.total : o.qty * o.cost) + '</td>'
+        + '<td>' + esc(sale ? o.payment : '-') + '</td><td>' + esc(o.notes || '') + '</td><td>' + esc(o.by || '') + '</td></tr>';
+    }).join('') || '<tr><td colspan="8" class="muted">Belum ada transaksi</td></tr>');
+}
+
+async function submitWaterSale(ev) {
+  ev.preventDefault();
+  const btn = $('#ws_btn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    const out = await post('waterSale', {
+      date: $('#ws_date').value, qty: $('#ws_qty').value, price: $('#ws_price').value,
+      payment: $('#ws_payment').value, notes: $('#ws_notes').value.trim()
+    });
+    waterMsg('Penjualan tersimpan (' + out.id + ').', 'ok');
+    $('#ws_qty').value = ''; $('#ws_notes').value = ''; wsTotal();
+    loadWater();
+  } catch (err) {
+    waterMsg('Gagal menyimpan: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Simpan Penjualan';
+    window.scrollTo(0, 0);
+  }
+}
+
+async function submitWaterRestock(ev) {
+  ev.preventDefault();
+  const btn = $('#wr_btn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    const out = await post('waterRestock', {
+      date: $('#wr_date').value, qty: $('#wr_qty').value, cost: $('#wr_cost').value,
+      price: $('#wr_price').value, notes: $('#wr_notes').value.trim()
+    });
+    waterMsg('Restock tersimpan (' + out.id + ').', 'ok');
+    $('#wr_qty').value = ''; $('#wr_notes').value = ''; wrTotal();
+    loadWater();
+  } catch (err) {
+    waterMsg('Gagal menyimpan: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Simpan Restock';
+    window.scrollTo(0, 0);
+  }
 }
 
 /* ===== FORM BARU ===== */
