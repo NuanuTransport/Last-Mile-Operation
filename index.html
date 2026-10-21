@@ -12,7 +12,7 @@ header{background:var(--brand);color:#fff;padding:14px 16px;display:flex;justify
 header h1{font-size:17px;margin:0}
 header small{display:block;font-size:12px;opacity:.85;font-weight:400}
 nav{background:#fff;border-bottom:1px solid var(--line);display:flex;padding:0 8px;position:sticky;top:0;z-index:5;overflow-x:auto}
-nav button{background:none;border:0;padding:12px 12px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+nav button{background:none;border:0;padding:12px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 nav button.active{color:var(--brand);border-bottom-color:var(--brand)}
 nav .cnt{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;background:var(--info);color:#fff;font-size:11px;margin-left:4px}
 main{max-width:1100px;margin:0 auto;padding:16px}
@@ -20,11 +20,17 @@ main{max-width:1100px;margin:0 auto;padding:16px}
 .btn{border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
 .btn.light{background:rgba(255,255,255,.2)}
 .btn.ghost{background:#eef2f7;color:var(--text)}
+.btn.danger{background:#fee2e2;color:var(--bad)}
+.btn.red{background:var(--bad);color:#fff}
 .btn:disabled{opacity:.6;cursor:wait}
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
 label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;width:100%;color:var(--text)}
 textarea{min-height:70px;resize:vertical}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+.seg{display:flex;gap:6px;background:#eef2f7;padding:4px;border-radius:10px;margin-bottom:16px}
+.seg button{flex:1;border:0;background:none;padding:10px;border-radius:8px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button.active{background:#fff;color:var(--brand);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .kpi .l{font-size:12px;color:var(--muted)}
@@ -43,15 +49,18 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .job{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
 .job .t{font-weight:700;font-size:15px}
 .job .s{font-size:13px;color:var(--muted);margin-top:3px}
-.job .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+.job .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.job .acts{display:flex;gap:8px}
 .elapsed{font-weight:700;color:var(--info)}
 .elapsed.long{color:var(--warn)}
+.cod{color:var(--bad);font-weight:700}
 .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#eef2f7;color:var(--muted)}
 .b-delivered{background:#dcfce7;color:var(--ok)}
 .b-ondelivery{background:#dbeafe;color:var(--info)}
 .b-rejected{background:#fee2e2;color:var(--bad)}
 .b-late{background:#fef3c7;color:var(--warn)}
 .b-ontime{background:#dcfce7;color:var(--ok)}
+.b-exp{background:#ede9fe;color:#6d28d9}
 .muted{color:var(--muted);font-size:12px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .form-grid .full{grid-column:1/-1}
@@ -92,9 +101,10 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     <div class="filters">
       <label>Dari<input type="date" id="from" onchange="load()"></label>
       <label>Sampai<input type="date" id="to" onchange="load()"></label>
+      <label>Type<select id="type" onchange="render()"><option value="">Semua</option><option>Delivery</option><option>Expedition</option></select></label>
       <label>Driver<select id="driver" onchange="render()"><option value="">Semua</option></select></label>
       <label>Status<select id="status" onchange="render()"><option value="">Semua</option></select></label>
-      <label>Cari<input type="search" id="q" placeholder="Order ID, customer, dropoff..." oninput="render()"></label>
+      <label>Cari<input type="search" id="q" placeholder="Order ID, nama, lokasi..." oninput="render()"></label>
     </div>
 
     <div class="kpis" id="kpis"></div>
@@ -115,42 +125,74 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   <div class="tab" id="tab-new">
     <div class="msg" id="formMsg"></div>
     <form id="newForm" class="card" onsubmit="submitDelivery(event)">
-      <h2>Order</h2>
+      <input type="hidden" name="type" id="f_type" value="Delivery">
+      <div class="seg">
+        <button type="button" class="type-btn active" data-type="Delivery" onclick="setType('Delivery')">Delivery</button>
+        <button type="button" class="type-btn" data-type="Expedition" onclick="setType('Expedition')">Expedition</button>
+      </div>
+
       <div class="form-grid">
         <label><span class="req">Date</span><input type="date" name="date" required></label>
-        <label>Order ID<input name="orderId" placeholder="Nomor order"></label>
-        <label><span class="req">Driver Last Mile</span>
+        <label><span class="req">Driver / Rider</span>
           <select name="driver" id="f_driver" required><option value="">Pilih driver</option></select></label>
-        <label><span class="req">Customer Name</span><input name="customer" required></label>
-        <label><span class="req">Vendor</span><input name="vendor" list="dl_vendor" required placeholder="Gojek, Grab, JNE..."></label>
-        <label>No Vendor<input name="noVendor" placeholder="No. resi / booking vendor"></label>
-        <label>Order Value (Rp)<input type="number" name="orderValue" min="0" step="1" inputmode="numeric"></label>
       </div>
 
-      <h2 style="margin-top:18px">Pickup & Dropoff</h2>
-      <div class="form-grid">
-        <label><span class="req">Pickup</span><input name="pickup" list="dl_pickup" required placeholder="P1"></label>
-        <label>Pickup Time<input type="time" name="pickupTime"></label>
-        <label><span class="req">Dropoff</span><input name="dropoff" list="dl_dropoff" required placeholder="Venue tujuan"></label>
-        <label class="full">Note<textarea name="note"></textarea></label>
-      </div>
+      <!-- Delivery reguler -->
+      <fieldset id="fs-delivery">
+        <h2 style="margin-top:18px">Order</h2>
+        <div class="form-grid">
+          <label>Order ID<input name="orderId" placeholder="Nomor order"></label>
+          <label><span class="req">Customer Name</span><input name="customer" required></label>
+          <label><span class="req">Vendor</span><input name="vendor" list="dl_vendor" required placeholder="Gojek, Grab, GoFood..."></label>
+          <label>No Vendor<input name="noVendor" placeholder="No. booking vendor"></label>
+          <label>Order Value (Rp)<input type="number" name="orderValue" min="0" step="1" inputmode="numeric"></label>
+        </div>
 
-      <h2 style="margin-top:18px">Foto</h2>
-      <div class="form-grid">
-        <label>Booking Photo<input type="file" accept="image/*" capture="environment" data-photo="booking">
-          <img class="photo-prev" id="prev_booking"></label>
-        <label>Handover<input type="file" accept="image/*" capture="environment" data-photo="handover">
-          <img class="photo-prev" id="prev_handover"></label>
-        <label>Sealing<input type="file" accept="image/*" capture="environment" data-photo="sealing">
-          <img class="photo-prev" id="prev_sealing"></label>
-      </div>
+        <h2 style="margin-top:18px">Pickup & Dropoff</h2>
+        <div class="form-grid">
+          <label><span class="req">Pickup</span><input name="pickup" list="dl_pickup" required placeholder="P1"></label>
+          <label>Pickup Time<input type="time" name="pickupTime"></label>
+          <label><span class="req">Dropoff</span><input name="dropoff" list="dl_location" required placeholder="Venue tujuan"></label>
+          <label class="full">Note<textarea name="note"></textarea></label>
+        </div>
 
-      <div class="form-grid" style="margin-top:18px">
-        <label><span class="req">Created by</span><input name="createdBy" id="f_createdBy" required></label>
-      </div>
-      <p class="muted">Status otomatis <b>On Delivery</b> setelah submit.</p>
+        <h2 style="margin-top:18px">Foto</h2>
+        <div class="form-grid">
+          <label>Booking Photo<input type="file" accept="image/*" capture="environment" data-photo="booking">
+            <img class="photo-prev" id="prev_booking"></label>
+          <label>Handover<input type="file" accept="image/*" capture="environment" data-photo="handover">
+            <img class="photo-prev" id="prev_handover"></label>
+          <label>Sealing<input type="file" accept="image/*" capture="environment" data-photo="sealing">
+            <img class="photo-prev" id="prev_sealing"></label>
+        </div>
 
-      <button class="btn" id="submitBtn" style="margin-top:6px;width:100%;padding:12px">Submit Delivery</button>
+        <div class="form-grid" style="margin-top:18px">
+          <label><span class="req">Created by</span><input name="createdBy" required></label>
+        </div>
+      </fieldset>
+
+      <!-- Expedition -->
+      <fieldset id="fs-exp" disabled style="display:none">
+        <h2 style="margin-top:18px">Paket Ekspedisi</h2>
+        <div class="form-grid">
+          <label><span class="req">Order ID / No. Resi</span><input name="orderId" required></label>
+          <label><span class="req">Expedition</span><input name="expedition" list="dl_exp" required placeholder="JNE, J&T, SiCepat..."></label>
+          <label><span class="req">Name (penerima)</span><input name="name" required></label>
+          <label><span class="req">Location</span><input name="location" list="dl_location" required placeholder="Venue tujuan"></label>
+          <label>Items<input name="items" placeholder="Jumlah / jenis barang"></label>
+          <label>Received (jam terima)<input type="time" name="receivedTime"></label>
+          <label>Payment
+            <select name="payment" id="f_payment" onchange="toggleCod()">
+              <option>Prepaid</option><option>COD</option>
+            </select></label>
+          <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span>
+            <input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
+          <label class="full">Note<textarea name="note"></textarea></label>
+        </div>
+      </fieldset>
+
+      <p class="muted" style="margin-top:14px">Status otomatis <b>On Delivery</b> setelah submit.</p>
+      <button class="btn" id="submitBtn" style="width:100%;padding:12px">Submit</button>
     </form>
   </div>
 
@@ -159,6 +201,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
     <div class="msg" id="activeMsg"></div>
     <div class="filters">
       <label>Driver<select id="a_driver" onchange="store('lm_activeDriver', this.value);renderActive()"><option value="">Semua driver</option></select></label>
+      <label>Type<select id="a_type" onchange="renderActive()"><option value="">Semua</option><option>Delivery</option><option>Expedition</option></select></label>
     </div>
     <div id="activeList"><p class="muted">Memuat...</p></div>
   </div>
@@ -166,7 +209,8 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 
 <datalist id="dl_vendor"></datalist>
 <datalist id="dl_pickup"></datalist>
-<datalist id="dl_dropoff"></datalist>
+<datalist id="dl_location"></datalist>
+<datalist id="dl_exp"></datalist>
 
 <!-- Login PIN -->
 <div class="overlay" id="login">
@@ -183,20 +227,22 @@ th{font-size:12px;color:var(--muted);font-weight:600}
   <div class="modal" id="detailBody"></div>
 </div>
 
-<!-- Proof of Delivery -->
-<div class="overlay" id="pod" onclick="if(event.target===this)closePod()">
+<!-- Delivered / Rejected -->
+<div class="overlay" id="fin" onclick="if(event.target===this)closeFin()">
   <div class="modal" style="max-width:440px">
-    <h3>Proof of Delivery</h3>
-    <div id="podInfo" class="muted" style="margin-bottom:12px"></div>
-    <form id="podForm" onsubmit="submitPod(event)">
-      <label><span class="req">Foto POD</span>
-        <input type="file" accept="image/*" capture="environment" id="podPhoto" required>
-        <img class="photo-prev" id="prev_pod"></label>
-      <label style="margin-top:12px"><span class="req">Nama Penerima</span>
-        <input id="podReceiver" required></label>
-      <div class="msg" id="podMsg" style="margin-top:12px"></div>
-      <button class="btn" id="podBtn" style="margin-top:14px;width:100%;padding:12px">Kirim & Set Delivered</button>
-      <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closePod()">Batal</button>
+    <h3 id="finTitle"></h3>
+    <div id="finInfo" class="muted" style="margin-bottom:12px"></div>
+    <form id="finForm" onsubmit="submitFin(event)">
+      <label id="finReasonWrap"><span class="req">Alasan Rejected</span>
+        <textarea id="finReason" placeholder="Contoh: penerima tidak ditemukan, alamat salah..."></textarea></label>
+      <label style="margin-top:12px"><span id="finPhotoLbl">Foto POD</span>
+        <input type="file" accept="image/*" capture="environment" id="finPhoto">
+        <img class="photo-prev" id="prev_fin"></label>
+      <label id="finReceiverWrap" style="margin-top:12px"><span class="req">Nama Penerima</span>
+        <input id="finReceiver"></label>
+      <div class="msg" id="finMsg" style="margin-top:12px"></div>
+      <button class="btn" id="finBtn" style="margin-top:14px;width:100%;padding:12px"></button>
+      <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closeFin()">Batal</button>
     </form>
   </div>
 </div>
@@ -207,13 +253,17 @@ const APPSHEET_APP = '';
 const PHOTO_TABLE = 'Job';
 const PAGE = 100;
 const PHOTO_COLS = ['Booking Photo','Handover','Sealing','POD Photo'];
+const EXP_LABEL = { 'Vendor':'Expedition', 'Customer Name':'Name', 'Dropoff':'Location', 'Pickup Time':'Received',
+  'Dropoff Time':'Delivery', 'Driver Last Mile':'Rider', 'Order Value':'Amount', 'POD Photo':'Proof of Delivery' };
 
-let ROWS = [], FILTERED = [], ACTIVE = [], shown = PAGE, podId = '';
+let ROWS = [], FILTERED = [], ACTIVE = [], VIS = [], shown = PAGE, FIN = null;
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ymd = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 const hm = d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+const rp = v => { const n = Number(String(v || '').replace(/[^\d]/g, '')); return n ? 'Rp ' + n.toLocaleString('id-ID') : '-'; };
+const lbl = (r, f) => r.Type === 'Expedition' && EXP_LABEL[f] ? EXP_LABEL[f] : f;
 
 function store(k, v){ try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch(e){ return ''; } }
 function getToken(){ return store('lm_token') || window._tk || ''; }
@@ -239,9 +289,9 @@ function init(){
   start.setDate(today.getDate() - 6);
   $('#from').value = ymd(start);
   $('#to').value = ymd(today);
-  resetForm();
+  setType(store('lm_type') || 'Delivery');
   $$('input[data-photo]').forEach(inp => previewOn(inp, $('#prev_' + inp.dataset.photo)));
-  previewOn($('#podPhoto'), $('#prev_pod'));
+  previewOn($('#finPhoto'), $('#prev_fin'));
   if (!getToken()) { $('#login').classList.add('show'); return; }
   boot();
 }
@@ -308,15 +358,18 @@ const avgDur = list => {
   return d.length ? fmtDur(d.reduce((a,b) => a+b, 0) / d.length) : '-';
 };
 const timeOf = s => { const m = String(s || '').match(/(\d{1,2}):(\d{2})(?!.*\d{1,2}:\d{2})/); return m ? m[1].padStart(2,'0') + ':' + m[2] : ''; };
+const sortKey = r => String(r['Date']) + timeOf(r['Pickup Time']);
+const typeBadge = r => r.Type === 'Expedition' ? '<span class="badge b-exp">Expedition</span> ' : '';
 
 function render(){
-  const drv = $('#driver').value, st = $('#status').value, q = $('#q').value.trim().toLowerCase();
+  const ty = $('#type').value, drv = $('#driver').value, st = $('#status').value, q = $('#q').value.trim().toLowerCase();
   FILTERED = ROWS.filter(r =>
+    (!ty || r.Type === ty) &&
     (!drv || r['Driver Last Mile'] === drv) &&
     (!st || r['Status'] === st) &&
     (!q || ['Order ID','Customer Name','Dropoff','Vendor','Receiver','No Vendor']
             .some(k => String(r[k] || '').toLowerCase().includes(q)))
-  ).sort((a,b) => (String(b['Date']) + timeOf(b['Pickup Time'])).localeCompare(String(a['Date']) + timeOf(a['Pickup Time'])));
+  ).sort((a,b) => sortKey(b).localeCompare(sortKey(a)));
   shown = PAGE;
   renderKpis(); renderDrivers(); renderOrders();
 }
@@ -330,6 +383,7 @@ function renderKpis(){
     ['Delivered', cnt('delivered')],
     ['On Delivery', cnt('on delivery')],
     ['Rejected', cnt('rejected')],
+    ['Expedition', L.filter(r => r.Type === 'Expedition').length],
     ['On Time Rate', pct(onT, onT + late)],
     ['Rata-rata Durasi', avgDur(L)]
   ];
@@ -342,10 +396,11 @@ function renderDrivers(){
   const rows = Object.entries(g).sort((a,b) => b[1].length - a[1].length).map(([d, L]) => {
     const onT = L.filter(isOnTime).length, late = L.filter(isLate).length;
     const del = L.filter(r => /delivered/i.test(r['Status'] || '')).length;
-    return `<tr><td>${esc(d)}</td><td>${L.length}</td><td>${del}</td><td>${onT}</td><td>${late}</td><td>${pct(onT, onT+late)}</td><td>${avgDur(L)}</td></tr>`;
+    const rej = L.filter(r => /rejected/i.test(r['Status'] || '')).length;
+    return `<tr><td>${esc(d)}</td><td>${L.length}</td><td>${del}</td><td>${rej}</td><td>${onT}</td><td>${late}</td><td>${pct(onT, onT+late)}</td><td>${avgDur(L)}</td></tr>`;
   }).join('');
-  $('#drivers').innerHTML = '<tr><th>Driver</th><th>Order</th><th>Delivered</th><th>On Time</th><th>Late</th><th>On Time %</th><th>Avg Durasi</th></tr>'
-    + (rows || '<tr><td colspan="7" class="muted">Tidak ada data</td></tr>');
+  $('#drivers').innerHTML = '<tr><th>Driver</th><th>Order</th><th>Delivered</th><th>Rejected</th><th>On Time</th><th>Late</th><th>On Time %</th><th>Avg Durasi</th></tr>'
+    + (rows || '<tr><td colspan="8" class="muted">Tidak ada data</td></tr>');
 }
 
 function renderOrders(){
@@ -353,7 +408,7 @@ function renderOrders(){
   $('#orders').innerHTML = FILTERED.slice(0, shown).map((r, i) => `
     <div class="order" onclick="openDetail(FILTERED[${i}])">
       <div>
-        <div class="t">${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Customer Name'])}</div>
+        <div class="t">${typeBadge(r)}${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Customer Name'])}</div>
         <div class="s">${esc(r['Vendor'])} → ${esc(r['Dropoff'])}</div>
         <div class="s">${esc(r['Driver Last Mile'])} · ${esc(r['Date'])} ${esc(timeOf(r['Pickup Time']))}</div>
       </div>
@@ -376,23 +431,231 @@ function photoUrl(v){
 }
 
 function openDetail(r){
-  const fields = ['System ID','Order ID','Date','Driver Last Mile','Customer Name','Vendor','No Vendor','Order Value',
-    'Pickup','Pickup Time','Dropoff','Dropoff Time','Receiver','Status','Duration','On Time / Late','SLA Check','Note','Created by'];
-  const photos = PHOTO_COLS.map(k => {
+  const fields = ['Type','System ID','Order ID','Date','Driver Last Mile','Customer Name','Vendor','No Vendor','Items',
+    'Order Value','Payment','Pickup','Pickup Time','Dropoff','Dropoff Time','Receiver','Status','Duration',
+    'On Time / Late','SLA Check','Note','Created by'].filter(f => f in r);
+  const photos = PHOTO_COLS.filter(k => k in r).map(k => {
     const u = photoUrl(r[k]);
-    if (u) return `<figure><a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="${k}" loading="lazy"></a><figcaption>${k}</figcaption></figure>`;
-    return r[k] ? `<figure><figcaption>${k}: ${esc(r[k])}</figcaption></figure>` : '';
+    if (u) return `<figure><a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="${k}" loading="lazy"></a><figcaption>${lbl(r,k)}</figcaption></figure>`;
+    return r[k] ? `<figure><figcaption>${lbl(r,k)}: ${esc(r[k])}</figcaption></figure>` : '';
   }).join('');
   $('#detailBody').innerHTML = `
-    <h3>${esc(r['Order ID'] || r['System ID'])}</h3>
-    <div class="grid">${fields.map(f => `<div>${f}</div><div>${esc(r[f] || '-')}</div>`).join('')}</div>
+    <h3>${typeBadge(r)}${esc(r['Order ID'] || r['System ID'])}</h3>
+    <div class="grid">${fields.map(f => `<div>${lbl(r,f)}</div><div>${esc(r[f] || '-')}</div>`).join('')}</div>
     <div class="photos">${photos}</div>
     <button class="btn ghost" style="margin-top:14px;width:100%" onclick="$('#detail').classList.remove('show')">Tutup</button>`;
   $('#detail').classList.add('show');
 }
 
-/* ================= DELIVERY BARU ================= */
+/* ================= FORM BARU ================= */
 async function loadOptions(){
   try {
     const o = await api({ action: 'options' });
     if (!o.ok) return;
+    const fill = (id, list) => $(id).innerHTML = list.map(v => `<option value="${esc(v)}">`).join('');
+    const opts = o.drivers.map(v => `<option>${esc(v)}</option>`).join('');
+    const cur = $('#f_driver').value;
+    $('#f_driver').innerHTML = '<option value="">Pilih driver</option>' + opts;
+    if (cur) $('#f_driver').value = cur;
+    $('#a_driver').innerHTML = '<option value="">Semua driver</option>' + opts;
+    $('#a_driver').value = store('lm_activeDriver');
+    fill('#dl_vendor', o.vendors);
+    fill('#dl_pickup', o.pickups);
+    fill('#dl_location', o.locations);
+    fill('#dl_exp', o.expeditions);
+    renderActive();
+  } catch (e) {}
+}
+
+function setType(t){
+  $('#f_type').value = t;
+  store('lm_type', t);
+  $$('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === t));
+  const isExp = t === 'Expedition';
+  $('#fs-delivery').disabled = isExp;
+  $('#fs-delivery').style.display = isExp ? 'none' : '';
+  $('#fs-exp').disabled = !isExp;
+  $('#fs-exp').style.display = isExp ? '' : 'none';
+  $('#submitBtn').textContent = isExp ? 'Submit Expedition' : 'Submit Delivery';
+  resetForm();
+}
+
+function toggleCod(){
+  const cod = $('#f_payment').value === 'COD';
+  $('#codWrap').style.display = cod ? '' : 'none';
+  $('#f_amount').required = cod;
+}
+
+function resetForm(){
+  const f = $('#newForm'), keepDriver = $('#f_driver').value, keepType = $('#f_type').value;
+  f.reset();
+  $('#f_type').value = keepType;
+  f.date.value = ymd(new Date());
+  f.pickupTime.value = hm(new Date());
+  f.receivedTime.value = hm(new Date());
+  f.createdBy.value = store('lm_createdBy');
+  if (keepDriver) $('#f_driver').value = keepDriver;
+  $$('#newForm .photo-prev').forEach(i => { i.style.display = 'none'; i.removeAttribute('src'); });
+  toggleCod();
+}
+
+function compress(file, max = 1280, q = 0.75){
+  return new Promise((res, rej) => {
+    if (!file) return res('');
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', q));
+    };
+    img.onerror = () => rej(new Error('Foto tidak bisa dibaca'));
+    img.src = url;
+  });
+}
+
+async function submitDelivery(ev){
+  ev.preventDefault();
+  const f = ev.target, btn = $('#submitBtn'), msg = $('#formMsg'), label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Mengirim...';
+  msg.className = 'msg';
+  try {
+    const data = Object.fromEntries(new FormData(f).entries());
+    if (data.type === 'Delivery') {
+      data.photos = {};
+      for (const inp of $$('input[data-photo]')) data.photos[inp.dataset.photo] = await compress(inp.files[0]);
+      store('lm_createdBy', data.createdBy);
+    }
+    const out = await post('create', data);
+    msg.textContent = data.type + ' tersimpan dengan status On Delivery. ID: ' + out.id;
+    msg.className = 'msg ok';
+    resetForm();
+    load(); loadActive();
+  } catch (err) {
+    msg.textContent = 'Gagal menyimpan: ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+    window.scrollTo(0, 0);
+  }
+}
+
+/* ================= ON DELIVERY ================= */
+async function loadActive(){
+  try {
+    const data = await api({ action: 'active' });
+    if (!data.ok) return;
+    ACTIVE = data.rows;
+    renderActive();
+  } catch (e) {
+    $('#activeList').innerHTML = '<p class="muted">Gagal memuat data.</p>';
+  }
+}
+
+function startDate(r){
+  const t = timeOf(r['Pickup Time']);
+  if (!r['Date'] || !t) return null;
+  const m = String(r['Pickup Time']).match(/^(\d{4}-\d{2}-\d{2})/);
+  return new Date((m ? m[1] : r['Date']) + 'T' + t + ':00');
+}
+
+function renderActive(){
+  $('#activeCnt').textContent = ACTIVE.length;
+  const drv = $('#a_driver').value, ty = $('#a_type').value;
+  VIS = ACTIVE.filter(r => (!drv || r['Driver Last Mile'] === drv) && (!ty || r.Type === ty))
+    .sort((a,b) => sortKey(a).localeCompare(sortKey(b)));
+  $('#activeList').innerHTML = VIS.map((r, i) => {
+    const p = startDate(r);
+    const min = p ? Math.floor((Date.now() - p) / 60000) : null;
+    const el = min == null || r.Type === 'Expedition' ? '<span></span>'
+      : `<span class="elapsed ${min >= 30 ? 'long' : ''}">${min} menit</span>`;
+    const cod = r.Type === 'Expedition' && /cod/i.test(r['Payment'] || '')
+      ? `<div class="s cod">COD ${rp(r['Order Value'])}</div>` : '';
+    const sub = r.Type === 'Expedition'
+      ? `${esc(r['Order ID'])} · ${esc(r['Vendor'])}${r['Items'] ? ' · ' + esc(r['Items']) : ''} · ${esc(r['Driver Last Mile'])}`
+      : `${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Vendor'])} · ${esc(r['Driver Last Mile'])}`;
+    const when = r.Type === 'Expedition'
+      ? `Received ${esc(timeOf(r['Pickup Time']))}`
+      : `Pickup ${esc(r['Pickup'])} ${esc(timeOf(r['Pickup Time']))}`;
+    return `
+      <div class="job">
+        <div class="t">${typeBadge(r)}${esc(r['Customer Name'])} → ${esc(r['Dropoff'])}</div>
+        <div class="s">${sub}</div>
+        <div class="s">${when}${r['Note'] ? ' · ' + esc(r['Note']) : ''}</div>
+        ${cod}
+        <div class="row">
+          ${el}
+          <div class="acts">
+            <button class="btn danger" onclick="openFin(${i}, 'Rejected')">Rejected</button>
+            <button class="btn" onclick="openFin(${i}, 'Delivered')">Kirim POD</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('') || '<p class="muted">Tidak ada order yang sedang dikirim.</p>';
+}
+
+function openFin(i, result){
+  const r = VIS[i];
+  if (!r) return;
+  FIN = { r, result };
+  const del = result === 'Delivered';
+  const needReceiver = del && r.Type === 'Delivery';
+  $('#finForm').reset();
+  $('#prev_fin').style.display = 'none';
+  $('#finMsg').className = 'msg';
+  $('#finTitle').textContent = del ? 'Proof of Delivery' : 'Rejected';
+  $('#finReasonWrap').style.display = del ? 'none' : '';
+  $('#finReason').required = !del;
+  $('#finPhotoLbl').textContent = del ? 'Foto POD' : 'Foto (opsional)';
+  $('#finPhotoLbl').classList.toggle('req', del);
+  $('#finPhoto').required = del;
+  $('#finReceiverWrap').style.display = needReceiver ? '' : 'none';
+  $('#finReceiver').required = needReceiver;
+  $('#finReceiver').value = r['Customer Name'] || '';
+  $('#finBtn').textContent = del ? 'Kirim & Set Delivered' : 'Set Rejected';
+  $('#finBtn').className = del ? 'btn' : 'btn red';
+  $('#finBtn').style.cssText = 'margin-top:14px;width:100%;padding:12px';
+  const cod = r.Type === 'Expedition' && /cod/i.test(r['Payment'] || '')
+    ? `<br><span class="cod">COD ${rp(r['Order Value'])}, tagih ke penerima</span>` : '';
+  $('#finInfo').innerHTML = `${typeBadge(r)}<b>${esc(r['Customer Name'])}</b> → ${esc(r['Dropoff'])}<br>`
+    + `${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Driver Last Mile'])}${cod}`;
+  $('#fin').classList.add('show');
+}
+function closeFin(){ $('#fin').classList.remove('show'); FIN = null; }
+
+async function submitFin(ev){
+  ev.preventDefault();
+  if (!FIN) return;
+  const { r, result } = FIN;
+  const btn = $('#finBtn'), msg = $('#finMsg'), label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Mengirim...';
+  msg.className = 'msg';
+  try {
+    const photo = await compress($('#finPhoto').files[0]);
+    const out = await post('finish', {
+      type: r.Type,
+      id: r.Type === 'Expedition' ? r['Order ID'] : r['System ID'],
+      result,
+      receiver: $('#finReceiver').value.trim(),
+      reason: $('#finReason').value.trim(),
+      photo
+    });
+    closeFin();
+    $('#activeMsg').textContent = 'Order ' + out.id + ' ' + out.result + ' pukul ' + out.time + '.';
+    $('#activeMsg').className = 'msg ok';
+    loadActive(); load();
+  } catch (err) {
+    msg.textContent = 'Gagal: ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+
+init();
+setInterval(() => { load(); loadActive(); }, 2 * 60 * 1000);
+</script>
+</body>
+</html>
