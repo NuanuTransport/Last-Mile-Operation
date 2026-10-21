@@ -179,7 +179,6 @@ th{font-size:12px;color:var(--muted);font-weight:600}
           <label><span class="req">Expedition</span><input name="expedition" list="dl_exp" required placeholder="JNE, J&T, SiCepat..."></label>
           <label><span class="req">Name (penerima)</span><input name="name" required></label>
           <label><span class="req">Location</span><input name="location" list="dl_location" required placeholder="Venue tujuan"></label>
-          <label>Items<input name="items" placeholder="Jumlah / jenis barang"></label>
           <label>Received (jam terima)<input type="time" name="receivedTime"></label>
           <label>Payment
             <select name="payment" id="f_payment" onchange="toggleCod()">
@@ -187,6 +186,9 @@ th{font-size:12px;color:var(--muted);font-weight:600}
             </select></label>
           <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span>
             <input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
+          <label class="full"><span class="req">Items (foto barang diterima)</span>
+            <input type="file" accept="image/*" capture="environment" id="f_items" required>
+            <img class="photo-prev" id="prev_items"></label>
           <label class="full">Note<textarea name="note"></textarea></label>
         </div>
       </fieldset>
@@ -252,9 +254,10 @@ const API_URL = 'PASTE_URL_EXEC_DI_SINI';
 const APPSHEET_APP = '';
 const PHOTO_TABLE = 'Job';
 const PAGE = 100;
-const PHOTO_COLS = ['Booking Photo','Handover','Sealing','POD Photo'];
+const PHOTO_COLS = ['Items Photo','Booking Photo','Handover','Sealing','POD Photo'];
 const EXP_LABEL = { 'Vendor':'Expedition', 'Customer Name':'Name', 'Dropoff':'Location', 'Pickup Time':'Received',
-  'Dropoff Time':'Delivery', 'Driver Last Mile':'Rider', 'Order Value':'Amount', 'POD Photo':'Proof of Delivery' };
+  'Dropoff Time':'Delivery', 'Driver Last Mile':'Rider', 'Order Value':'Amount', 'POD Photo':'Proof of Delivery',
+  'Items Photo':'Items' };
 
 let ROWS = [], FILTERED = [], ACTIVE = [], VIS = [], shown = PAGE, FIN = null;
 const $ = s => document.querySelector(s);
@@ -291,6 +294,7 @@ function init(){
   $('#to').value = ymd(today);
   setType(store('lm_type') || 'Delivery');
   $$('input[data-photo]').forEach(inp => previewOn(inp, $('#prev_' + inp.dataset.photo)));
+  previewOn($('#f_items'), $('#prev_items'));
   previewOn($('#finPhoto'), $('#prev_fin'));
   if (!getToken()) { $('#login').classList.add('show'); return; }
   boot();
@@ -431,7 +435,7 @@ function photoUrl(v){
 }
 
 function openDetail(r){
-  const fields = ['Type','System ID','Order ID','Date','Driver Last Mile','Customer Name','Vendor','No Vendor','Items',
+  const fields = ['Type','System ID','Order ID','Date','Driver Last Mile','Customer Name','Vendor','No Vendor',
     'Order Value','Payment','Pickup','Pickup Time','Dropoff','Dropoff Time','Receiver','Status','Duration',
     'On Time / Late','SLA Check','Note','Created by'].filter(f => f in r);
   const photos = PHOTO_COLS.filter(k => k in r).map(k => {
@@ -527,6 +531,8 @@ async function submitDelivery(ev){
       data.photos = {};
       for (const inp of $$('input[data-photo]')) data.photos[inp.dataset.photo] = await compress(inp.files[0]);
       store('lm_createdBy', data.createdBy);
+    } else {
+      data.itemsPhoto = await compress($('#f_items').files[0]);
     }
     const out = await post('create', data);
     msg.textContent = data.type + ' tersimpan dengan status On Delivery. ID: ' + out.id;
@@ -574,7 +580,7 @@ function renderActive(){
     const cod = r.Type === 'Expedition' && /cod/i.test(r['Payment'] || '')
       ? `<div class="s cod">COD ${rp(r['Order Value'])}</div>` : '';
     const sub = r.Type === 'Expedition'
-      ? `${esc(r['Order ID'])} · ${esc(r['Vendor'])}${r['Items'] ? ' · ' + esc(r['Items']) : ''} · ${esc(r['Driver Last Mile'])}`
+      ? `${esc(r['Order ID'])} · ${esc(r['Vendor'])} · ${esc(r['Driver Last Mile'])}`
       : `${esc(r['Order ID'] || r['System ID'])} · ${esc(r['Vendor'])} · ${esc(r['Driver Last Mile'])}`;
     const when = r.Type === 'Expedition'
       ? `Received ${esc(timeOf(r['Pickup Time']))}`
@@ -641,21 +647,3 @@ async function submitFin(ev){
       receiver: $('#finReceiver').value.trim(),
       reason: $('#finReason').value.trim(),
       photo
-    });
-    closeFin();
-    $('#activeMsg').textContent = 'Order ' + out.id + ' ' + out.result + ' pukul ' + out.time + '.';
-    $('#activeMsg').className = 'msg ok';
-    loadActive(); load();
-  } catch (err) {
-    msg.textContent = 'Gagal: ' + err.message;
-    msg.className = 'msg err';
-  } finally {
-    btn.disabled = false; btn.textContent = label;
-  }
-}
-
-init();
-setInterval(() => { load(); loadActive(); }, 2 * 60 * 1000);
-</script>
-</body>
-</html>
