@@ -93,6 +93,11 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .photos img{width:100%;border-radius:8px;border:1px solid var(--line);background:#f3f4f6}
 .photos figcaption{font-size:12px;color:var(--muted);margin-top:4px}
 #more{display:block;margin:12px auto 0}
+.order-box,.venue-box{max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:0 8px 8px}
+.venue-box{max-height:50vh;padding:0}
+.venue-box th{position:sticky;top:0;background:#fff;z-index:1}
+.vbar{height:6px;border-radius:99px;background:#ccfbf1;margin-top:4px;min-width:120px}
+.vbar span{display:block;height:100%;border-radius:99px;background:var(--brand)}
 .cal-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .cal-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .cal-nav b{min-width:120px;text-align:center}
@@ -185,9 +190,15 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="drivers"></table></div>
     </div>
     <div class="card">
+      <h2>Rekap Venue <span class="muted">(pengiriman terbanyak ke terendah)</span></h2>
+      <div class="venue-box"><table id="venues"></table></div>
+    </div>
+    <div class="card">
       <h2>Daftar Order <span class="muted" id="count"></span></h2>
-      <div id="orders"></div>
-      <button class="btn" id="more" onclick="showMore()">Tampilkan lebih banyak</button>
+      <div class="order-box">
+        <div id="orders"></div>
+        <button class="btn" id="more" onclick="showMore()">Tampilkan lebih banyak</button>
+      </div>
     </div>
   </div>
 
@@ -353,7 +364,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 22 Okt 2026 (b)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 22 Okt 2026 (c)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -638,7 +649,25 @@ function render() {
     (!q || keys.some(k => String(r[k] || '').toLowerCase().includes(q)))
   ).sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   shown = PAGE;
-  renderKpis(); renderDrivers(); renderOrders();
+  renderKpis(); renderDrivers(); renderVenues(); renderOrders();
+}
+
+function renderVenues() {
+  const g = {};
+  FILTERED.forEach(r => { const v = String(r['Dropoff'] || '').trim() || '(kosong)'; (g[v] = g[v] || []).push(r); });
+  const names = Object.keys(g).sort((a, b) => g[b].length - g[a].length || a.localeCompare(b));
+  const max = names.length ? g[names[0]].length : 0;
+  const rows = names.map((v, i) => {
+    const L = g[v];
+    const del = L.filter(r => r.Type !== 'Expedition').length;
+    const exp = L.length - del;
+    const done = L.filter(r => /delivered/i.test(r['Status'] || '')).length;
+    const onT = L.filter(isOnTime).length, late = L.filter(isLate).length;
+    return '<tr><td>' + (i + 1) + '</td><td>' + esc(v) + '<div class="vbar"><span style="width:' + Math.round(L.length / max * 100) + '%"></span></div></td>'
+      + '<td><b>' + L.length + '</b></td><td>' + del + '</td><td>' + exp + '</td><td>' + done + '</td><td>' + pct(onT, onT + late) + '</td></tr>';
+  }).join('');
+  $('#venues').innerHTML = '<thead><tr><th>#</th><th>Venue</th><th>Total</th><th>Delivery</th><th>Expedition</th><th>Delivered</th><th>On Time %</th></tr></thead><tbody>'
+    + (rows || '<tr><td colspan="7" class="muted">Tidak ada data</td></tr>') + '</tbody>';
 }
 
 function renderKpis() {
