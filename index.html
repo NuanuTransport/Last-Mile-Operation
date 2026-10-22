@@ -94,6 +94,13 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .photos figcaption{font-size:12px;color:var(--muted);margin-top:4px}
 #more{display:block;margin:12px auto 0}
 .venue-txt{margin-top:6px}
+.hours{display:grid;grid-template-columns:repeat(var(--n,15),minmax(0,1fr));gap:3px;align-items:end;padding-top:6px}
+.hbar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}
+.hbar .c{font-size:10px;color:var(--muted);font-weight:600;min-height:13px}
+.hbar .b{display:block;width:100%;max-width:28px;background:#99f6e4;border-radius:4px 4px 0 0}
+.hbar.peak .b{background:var(--brand)}
+.hbar.peak .c{color:var(--brand)}
+.hbar .h{font-size:10px;color:var(--muted);margin-top:4px;border-top:1px solid var(--line);width:100%;text-align:center;padding-top:3px}
 .order-box,.venue-box{max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:0 8px 8px}
 .venue-box{max-height:50vh;padding:0}
 .venue-box th{position:sticky;top:0;background:#fff;z-index:1}
@@ -189,6 +196,11 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
     <div class="card">
       <h2>Performa Driver</h2>
       <div class="scroll"><table id="drivers"></table></div>
+    </div>
+    <div class="card">
+      <h2>Jam Sibuk <span class="muted">(jumlah order per jam pickup / received)</span></h2>
+      <div class="hours" id="hours"></div>
+      <p class="muted" id="hourPeak" style="margin:12px 0 0"></p>
     </div>
     <div class="card">
       <h2>Rekap Venue <span class="muted">(pengiriman terbanyak ke terendah)</span></h2>
@@ -365,7 +377,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 22 Okt 2026 (d)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 22 Okt 2026 (e)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -651,7 +663,40 @@ function render() {
     (!q || keys.some(k => String(r[k] || '').toLowerCase().includes(q)))
   ).sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   shown = PAGE;
-  renderKpis(); renderDrivers(); renderVenues(); renderOrders();
+  renderKpis(); renderDrivers(); renderHours(); renderVenues(); renderOrders();
+}
+
+function renderHours() {
+  const cnt = {}, days = new Set();
+  FILTERED.forEach(r => {
+    const t = timeOf(r['Pickup Time']);
+    if (!t) return;
+    const h = Number(t.slice(0, 2));
+    cnt[h] = (cnt[h] || 0) + 1;
+    days.add(String(r['Date']).slice(0, 10));
+  });
+  const hs = Object.keys(cnt).map(Number);
+  if (!hs.length) {
+    $('#hours').innerHTML = '<p class="muted" style="grid-column:1/-1">Tidak ada data jam</p>';
+    $('#hourPeak').textContent = '';
+    return;
+  }
+  const lo = Math.min(7, ...hs), hi = Math.max(21, ...hs);
+  const max = Math.max(...hs.map(h => cnt[h]));
+  const top = hs.slice().sort((a, b) => cnt[b] - cnt[a] || a - b).slice(0, 3);
+  const nd = days.size;
+  let html = '';
+  for (let h = lo; h <= hi; h++) {
+    const c = cnt[h] || 0;
+    html += '<div class="hbar' + (c && top.indexOf(h) >= 0 ? ' peak' : '') + '" title="' + pad(h) + ':00-' + pad(h + 1) + ':00 · ' + c + ' order">'
+      + '<span class="c">' + (c || '') + '</span>'
+      + '<span class="b" style="height:' + (c ? Math.max(4, Math.round(c / max * 120)) : 0) + 'px"></span>'
+      + '<span class="h">' + pad(h) + '</span></div>';
+  }
+  $('#hours').style.setProperty('--n', hi - lo + 1);
+  $('#hours').innerHTML = html;
+  $('#hourPeak').innerHTML = '<b>Paling padat:</b> ' + top.map(h => pad(h) + ':00–' + pad(h + 1) + ':00 (' + cnt[h] + ' order'
+    + (nd > 1 ? ', rata-rata ' + (cnt[h] / nd).toFixed(1) + '/hari' : '') + ')').join(' · ');
 }
 
 function renderVenues() {
