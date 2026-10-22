@@ -93,6 +93,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .photos img{width:100%;border-radius:8px;border:1px solid var(--line);background:#f3f4f6}
 .photos figcaption{font-size:12px;color:var(--muted);margin-top:4px}
 #more{display:block;margin:12px auto 0}
+.venue-txt{margin-top:6px}
 .order-box,.venue-box{max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:0 8px 8px}
 .venue-box{max-height:50vh;padding:0}
 .venue-box th{position:sticky;top:0;background:#fff;z-index:1}
@@ -227,9 +228,9 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
         </div>
         <h2 style="margin-top:18px">Pickup &amp; Dropoff</h2>
         <div class="form-grid">
-          <label><span class="req">Pickup</span><input name="pickup" list="dl_pickup" required placeholder="P1"></label>
+          <div data-venue="pickup" data-label="Pickup" data-req="1"></div>
           <label>Pickup Time<input type="time" name="pickupTime"></label>
-          <label><span class="req">Dropoff</span><input name="dropoff" list="dl_location" required placeholder="Venue tujuan"></label>
+          <div data-venue="dropoff" data-label="Dropoff" data-req="1"></div>
           <label class="full">Note<textarea name="note"></textarea></label>
         </div>
         <h2 style="margin-top:18px">Foto</h2>
@@ -246,7 +247,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
           <label><span class="req">Order ID / No. Resi</span><input name="orderId" required></label>
           <label><span class="req">Expedition</span><input name="expedition" list="dl_exp" required placeholder="JNE, J&amp;T, SiCepat..."></label>
           <label><span class="req">Name (penerima)</span><input name="name" required></label>
-          <label><span class="req">Location</span><input name="location" list="dl_location" required placeholder="Venue tujuan"></label>
+          <div data-venue="location" data-label="Location" data-req="1"></div>
           <label>Received (jam terima)<input type="time" name="receivedTime"></label>
           <label>Payment<select name="payment" id="f_payment" onchange="toggleCod()"><option>Prepaid</option><option>COD</option></select></label>
           <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span><input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
@@ -364,7 +365,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 22 Okt 2026 (c)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 22 Okt 2026 (d)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -532,6 +533,7 @@ function init() {
   $('#from').value = ymd(today);
   $('#to').value = ymd(today);
   markPreset();
+  mountVenues(document);
   setType(store('lm_type') || 'Delivery');
   $$('input[data-photo]').forEach(inp => previewOn(inp, $('#prev_' + inp.dataset.photo)));
   previewOn($('#f_items'), $('#prev_items'));
@@ -1044,6 +1046,40 @@ async function submitWaterDeposit(ev) {
   }
 }
 
+/* ===== DAFTAR VENUE (Pickup / Dropoff / Location) ===== */
+const VENUES = ['Suara Temple', 'Alpha Wolf Lodge', 'Emme Museum', 'ProEd Global School', 'Lumeira', 'Art Village', 'Kids Academy',
+  'Nuanu Park', 'IT Office', 'Nuanu Ticket Box', 'Pasar Nusantara', 'Oshom', 'Luna Beach Club', 'Desa Jiwa', 'Ash Restaurant', 'Oasis',
+  'Apartment House (1)', 'Apartment House (2)', 'Apartment House (3)', 'Apartment House (4)', 'Apartment House (5)', 'Apartment House (6)',
+  'Nuanu Suite', 'Odyssey Garden', 'Big Building (Service Team)', 'Big Building (Operational)', 'Big Building (Event)',
+  'Big Building (Marketing)', 'Big Building (NSF)', 'Big Building (PCM)', 'Big Building (Landscape)', 'Big Building (Environmental)',
+  'Big Building (Accommodation)', 'Brand and Com', 'Meeting Room 1', 'Meeting Room 2', 'Architect Office', 'Purchasing Office',
+  'Finance Office', 'Public Relations', 'Investment Office', 'Senior Management Office', 'Legal Office', 'HR Office',
+  'Nuanu Experience', 'Music Camp', 'Shell House', 'Longhouse', 'Labyrinth Art & Gallery', 'Labyrinth Dome',
+  'Nuanu Real Estate Office', 'Nuanu Real Estate (Music Camp)', 'SMS Office', 'Makerspace', 'Block42', 'Phoenix', 'Magic Garden',
+  'Pacha Alpaca', 'Red Tent', 'Nuanu Parking 2', 'Nuanu Parking 3', 'MEP Office', 'Mechanic Workshop', 'PGM Office (Security)',
+  'Receiving (BOH)'];
+function venueField(name, label, req, val) {
+  val = String(val || '').trim();
+  const other = !!val && VENUES.indexOf(val) < 0;
+  return '<label><span' + (req ? ' class="req"' : '') + '>' + label + '</span>'
+    + '<select class="venue-sel"' + (req ? ' required' : '') + ' onchange="venuePick(this)">'
+    + '<option value="">Pilih lokasi</option>'
+    + VENUES.map(v => '<option' + (v === val ? ' selected' : '') + '>' + esc(v) + '</option>').join('')
+    + '<option value="__other"' + (other ? ' selected' : '') + '>Lainnya (ketik sendiri)</option></select>'
+    + '<input name="' + name + '" class="venue-txt" placeholder="Ketik nama lokasi" value="' + esc(val) + '"'
+    + (other ? (req ? ' required' : '') : ' style="display:none"') + '></label>';
+}
+function venuePick(sel) {
+  const t = sel.parentNode.querySelector('.venue-txt'), other = sel.value === '__other';
+  t.style.display = other ? '' : 'none';
+  t.required = other && sel.required;
+  t.value = other ? '' : sel.value;
+  if (other) t.focus();
+}
+function mountVenues(root) {
+  root.querySelectorAll('[data-venue]').forEach(el => { el.outerHTML = venueField(el.dataset.venue, el.dataset.label, el.dataset.req === '1', ''); });
+}
+
 /* ===== FORM BARU ===== */
 async function loadOptions() {
   try {
@@ -1094,6 +1130,7 @@ function resetForm() {
   f.querySelector('[name=receivedTime]').value = hm(new Date());
   if (keepDriver) $('#f_driver').value = keepDriver;
   $$('#newForm .photo-prev').forEach(i => { i.style.display = 'none'; i.removeAttribute('src'); });
+  $$('#newForm .venue-txt').forEach(t => { t.style.display = 'none'; t.required = false; t.value = ''; });
   toggleCod();
 }
 
@@ -1235,7 +1272,7 @@ function openEdit(i) {
     html = inp('orderId', 'Order ID / No. Resi', v('Order ID'), true)
       + inp('expedition', 'Expedition', v('Vendor'), true, ' list="dl_exp"')
       + inp('name', 'Name (penerima)', v('Customer Name'), true)
-      + inp('location', 'Location', v('Dropoff'), true, ' list="dl_location"')
+      + venueField('location', 'Location', true, r['Dropoff'])
       + '<label>Payment<select name="payment" id="e_payment"><option' + (cod ? '' : ' selected') + '>Prepaid</option><option' + (cod ? ' selected' : '') + '>COD</option></select></label>'
       + inp('amount', 'Amount COD (Rp)', esc(digits('Order Value')), false, ' type="number" min="0" step="1" inputmode="numeric"');
   } else {
@@ -1247,8 +1284,8 @@ function openEdit(i) {
       + inp('vendor', 'Vendor', v('Vendor'), true, ' list="dl_vendor"')
       + inp('noVendor', 'No Vendor', v('No Vendor'), false)
       + inp('orderValue', 'Order Value (Rp)', esc(digits('Order Value')), false, ' type="number" min="0" step="1" inputmode="numeric"')
-      + inp('pickup', 'Pickup', v('Pickup'), true, ' list="dl_pickup"')
-      + inp('dropoff', 'Dropoff', v('Dropoff'), true, ' list="dl_location"')
+      + venueField('pickup', 'Pickup', true, r['Pickup'])
+      + venueField('dropoff', 'Dropoff', true, r['Dropoff'])
       + '<label class="full">Note<textarea name="note">' + v('Note') + '</textarea></label>';
   }
   $('#editFields').innerHTML = html;
