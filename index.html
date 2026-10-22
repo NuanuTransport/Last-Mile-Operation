@@ -1,368 +1,101 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nuanu Last Mile</title>
-<style>
-:root{--bg:#f4f5f7;--card:#fff;--text:#1d2330;--muted:#6b7280;--line:#e5e7eb;--brand:#0f766e;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--info:#1d4ed8}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-header{background:var(--brand);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-header h1{font-size:17px;margin:0}
-header small{display:block;font-size:12px;opacity:.85;font-weight:400}
-nav{background:#fff;border-bottom:1px solid var(--line);display:flex;padding:0 8px;position:sticky;top:0;z-index:5;overflow-x:auto}
-nav button{background:none;border:0;padding:12px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
-nav button.active{color:var(--brand);border-bottom-color:var(--brand)}
-nav .cnt{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;background:var(--info);color:#fff;font-size:11px;margin-left:4px}
-main{max-width:1100px;margin:0 auto;padding:16px}
-.tab{display:none}.tab.active{display:block}
-.btn{border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
-.btn.light{background:rgba(255,255,255,.2)}
-.btn.ghost{background:#eef2f7;color:var(--text)}
-.btn.danger{background:#fee2e2;color:var(--bad)}
-.btn.red{background:var(--bad);color:#fff}
-.btn:disabled{opacity:.6;cursor:wait}
-.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
-.presets{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 16px}
-.presets .btn{padding:6px 12px;font-size:13px}
-.presets .btn.on{background:var(--brand);color:#fff}
-label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
-input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;width:100%;color:var(--text)}
-textarea{min-height:70px;resize:vertical}
-/* tanggal & jam: cegah kotak melebar/menumpuk di HP (terutama iPhone) */
-label,.filters>*,.form-grid>*{min-width:0}
-input,select,textarea{max-width:100%;min-width:0}
-input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;min-height:40px;line-height:22px;text-align:left}
-input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;margin:0}
-.filters>label,.form-grid>label{overflow:hidden}
-@media(max-width:480px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid{grid-template-columns:minmax(0,1fr)}}
-fieldset{border:0;padding:0;margin:0;min-width:0}
-.seg{display:flex;gap:6px;background:#eef2f7;padding:4px;border-radius:10px;margin-bottom:16px}
-.seg button{flex:1;border:0;background:none;padding:10px;border-radius:8px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
-.seg button.active{background:#fff;color:var(--brand);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.kpi .l{font-size:12px;color:var(--muted)}
-.kpi .v{font-size:22px;font-weight:700;margin-top:4px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
-.card h2{font-size:15px;margin:0 0 12px}
-.scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
-th{font-size:12px;color:var(--muted);font-weight:600}
-.order{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer}
-.order:hover{background:#f9fafb}
-.order .t{font-weight:600}
-.order .s{font-size:12px;color:var(--muted);margin-top:2px}
-.order .r{text-align:right;flex-shrink:0}
-.job{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
-.job .t{font-weight:700;font-size:15px}
-.job .s{font-size:13px;color:var(--muted);margin-top:3px}
-.job .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
-.job .acts{display:flex;gap:8px}
-.elapsed{font-weight:700;color:var(--info)}
-.elapsed.long{color:var(--warn)}
-.cod{color:var(--bad);font-weight:700}
-.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#eef2f7;color:var(--muted)}
-.b-delivered{background:#dcfce7;color:var(--ok)}
-.b-ondelivery{background:#dbeafe;color:var(--info)}
-.b-rejected{background:#fee2e2;color:var(--bad)}
-.b-late{background:#fef3c7;color:var(--warn)}
-.b-ontime{background:#dcfce7;color:var(--ok)}
-.b-exp{background:#ede9fe;color:#6d28d9}
-.b-stored{background:#fef3c7;color:var(--warn)}
-.user{display:flex;align-items:center;gap:8px;font-size:12px}
-.user span{opacity:.9;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.muted{color:var(--muted);font-size:12px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.form-grid .full{grid-column:1/-1}
-.req::after{content:" *";color:var(--bad)}
-.photo-prev{width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:none;margin-top:4px}
-.msg{padding:10px 12px;border-radius:8px;margin-bottom:12px;display:none;font-weight:600}
-.msg.ok{display:block;background:#dcfce7;color:var(--ok)}
-.msg.err{display:block;background:#fee2e2;color:var(--bad)}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
-.overlay.show{display:flex}
-.modal{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:90vh;overflow:auto;padding:18px}
-.modal h3{margin:0 0 12px;font-size:16px}
-.grid{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:13px}
-.grid div:nth-child(odd){color:var(--muted)}
-.photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:14px}
-.photos figure{margin:0}
-.photos img{width:100%;border-radius:8px;border:1px solid var(--line);background:#f3f4f6}
-.photos figcaption{font-size:12px;color:var(--muted);margin-top:4px}
-#more{display:block;margin:12px auto 0}
-.venue-txt{margin-top:6px}
-.hours{display:grid;grid-template-columns:repeat(var(--n,15),minmax(0,1fr));gap:3px;align-items:end;padding-top:6px}
-.hbar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}
-.hbar .c{font-size:10px;color:var(--muted);font-weight:600;min-height:13px}
-.hbar .b{display:block;width:100%;max-width:28px;background:#99f6e4;border-radius:4px 4px 0 0}
-.hbar.peak .b{background:var(--brand)}
-.hbar.peak .c{color:var(--brand)}
-.hbar .d{font-size:10px;color:#9ca3af;margin-top:2px}
-.hbar .d.zero{color:var(--bad);font-weight:700}
-.legend-d{color:#9ca3af}
-.warn{color:var(--bad)}
-.hbar .h{font-size:10px;color:var(--muted);margin-top:4px;border-top:1px solid var(--line);width:100%;text-align:center;padding-top:3px}
-.order-box,.venue-box{max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;padding:0 8px 8px}
-.venue-box{max-height:50vh;padding:0}
-.venue-box th{position:sticky;top:0;background:#fff;z-index:1}
-.vbar{height:6px;border-radius:99px;background:#ccfbf1;margin-top:4px;min-width:120px}
-.vbar span{display:block;height:100%;border-radius:99px;background:var(--brand)}
-.cal-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.cal-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.cal-nav b{min-width:120px;text-align:center}
-.cal-nav select{width:auto}
-.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.cal .dow{font-size:11px;color:var(--muted);text-align:center;font-weight:600;padding:4px 0}
-.cal .day{min-height:90px;border:1px solid var(--line);border-radius:8px;padding:4px;cursor:pointer;background:#fff;overflow:hidden}
-.cal .day:hover{border-color:var(--brand)}
-.cal .day.out{background:#f9fafb;cursor:default;border-color:transparent}
-.cal .day.today{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
-.cal .num{font-size:12px;font-weight:700}
-.cal .chip{display:block;font-size:10.5px;border-radius:4px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cal .cnt2{display:none;font-size:11px;color:var(--muted);margin-top:4px}
-.legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.s-M,.s-M1{background:#dbeafe;color:#1d4ed8}.s-M2{background:#ccfbf1;color:#0f766e}.s-A{background:#ffedd5;color:#c2410c}
-.pay-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.pay{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.pay .l{font-size:12px;color:var(--muted);font-weight:600}
-.pay .v{font-size:18px;font-weight:700;margin-top:4px}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
-.two .card{margin-bottom:0}
-.total-line{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-weight:700}
-tfoot td{font-weight:700;border-top:2px solid var(--line)}
-.b-sale{background:#dcfce7;color:var(--ok)}.b-restock{background:#dbeafe;color:var(--info)}.b-move{background:#ede9fe;color:#6d28d9}
-.stock-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.stock{border:1px solid var(--line);border-radius:12px;padding:14px}
-.stock .l{font-size:12px;color:var(--muted);font-weight:600}
-.stock .v{font-size:24px;font-weight:700;margin-top:4px}
-.stock .v.neg{color:var(--bad)}
-.team-tag{display:inline-block;padding:1px 6px;border-radius:99px;font-size:11px;font-weight:600;background:#eef2f7;color:var(--muted)}
-.t-taxi{background:#fef3c7;color:var(--warn)}.t-lm{background:#dbeafe;color:var(--info)}.b-dep{background:#fce7f3;color:#be185d}
-.owe{color:var(--bad);font-weight:700}
-.s-N{background:#ede9fe;color:#6d28d9}.s-MID{background:#ccfbf1;color:#0f766e}.s-EO{background:#fce7f3;color:#be185d}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
-@media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
-</style>
-</head>
-<body>
+/* =====================================================================
+   PERINGATAN ORDER TELAT KE TELEGRAM (Last Mile)
+   File terpisah di project yang sama dengan WebAPI.gs, WaterReport.gs, LastMileReport.gs.
+   Memakai bot & grup yang sama (WR_BOT_TOKEN, WR_CHAT_ID dari WaterReport.gs).
 
-<header>
-  <h1>Nuanu Last Mile<small id="updated">Memuat...</small></h1>
-  <div class="user">
-    <span id="userEmail"></span>
-    <button class="btn light" onclick="refreshAll()">Refresh</button>
-    <button class="btn light" onclick="signOut()">Keluar</button>
-  </div>
-</header>
+   Cara kerja:
+   - Dicek otomatis setiap 5 menit.
+   - Delivery yang statusnya masih "On Delivery" lebih dari 30 menit sejak Pickup Time
+     langsung dikirim peringatan ke grup.
+   - Kalau masih belum selesai, diingatkan lagi di menit ke-60 dan ke-90, lalu berhenti
+     (supaya order yang lupa ditutup tidak mengirim pesan terus-menerus).
+   - Order yang sudah lebih dari 3 jam tidak diperingatkan lagi.
 
-<nav>
-  <button class="active" data-tab="dash" onclick="showTab('dash')">Dashboard</button>
-  <button data-tab="new" onclick="showTab('new')">Delivery Baru</button>
-  <button data-tab="active" onclick="showTab('active')">Order Aktif<span class="cnt" id="activeCnt">0</span></button>
-  <button data-tab="water" onclick="showTab('water')">Air Mineral</button>
-</nav>
+   Setup:
+   1. Jalankan laPreview untuk melihat order yang sedang telat (lihat Execution log).
+   2. Jalankan laSetupTrigger sekali untuk mengaktifkan pengecekan setiap 5 menit.
+   ===================================================================== */
 
-<main>
-  <!-- DASHBOARD -->
-  <div class="tab active" id="tab-dash">
-    <div class="filters">
-      <label>Dari<input type="date" id="from" onchange="markPreset();load()"></label>
-      <label>Sampai<input type="date" id="to" onchange="markPreset();load()"></label>
-      <label>Type<select id="type" onchange="render()"><option value="">Semua</option><option>Delivery</option><option>Expedition</option></select></label>
-      <label>Driver<select id="driver" onchange="render()"><option value="">Semua</option></select></label>
-      <label>Status<select id="status" onchange="render()"><option value="">Semua</option></select></label>
-      <label>Cari<input type="search" id="q" placeholder="Order ID, nama, lokasi..." oninput="render()"></label>
-    </div>
-    <div class="presets" id="presets">
-      <button class="btn ghost" data-range="today" onclick="setRange('today')">Hari ini</button>
-      <button class="btn ghost" data-range="yesterday" onclick="setRange('yesterday')">Kemarin</button>
-      <button class="btn ghost" data-range="7d" onclick="setRange('7d')">7 hari terakhir</button>
-      <button class="btn ghost" data-range="month" onclick="setRange('month')">Bulan ini</button>
-      <button class="btn ghost" data-range="lastmonth" onclick="setRange('lastmonth')">Bulan lalu</button>
-    </div>
-    <div class="kpis" id="kpis"></div>
-    <div class="card">
-      <div class="cal-head">
-        <h2 style="margin:0">Jadwal Driver</h2>
-        <div class="cal-nav">
-          <button class="btn ghost" onclick="calMove(-1)">&lsaquo;</button>
-          <b id="calTitle"></b>
-          <button class="btn ghost" onclick="calMove(1)">&rsaquo;</button>
-          <select id="calDriver" onchange="renderCal()"><option value="">Semua driver</option></select>
-        </div>
-      </div>
-      <div class="muted" id="calToday" style="margin-bottom:10px"></div>
-      <div class="cal" id="cal"></div>
-      <div class="legend" id="calLegend"></div>
-    </div>
-    <div class="card">
-      <h2>Performa Driver</h2>
-      <div class="scroll"><table id="drivers"></table></div>
-    </div>
-    <div class="card">
-      <h2>Jam Sibuk <span class="muted">(jumlah order per jam pickup / received)</span></h2>
-      <div class="hours" id="hours"></div>
-      <p class="muted" id="hourPeak" style="margin:12px 0 0"></p>
-    </div>
-    <div class="card">
-      <h2>Rekap Venue <span class="muted">(pengiriman terbanyak ke terendah)</span></h2>
-      <div class="venue-box"><table id="venues"></table></div>
-    </div>
-    <div class="card">
-      <h2>Rekap Vendor <span class="muted">(pengiriman terbanyak ke terendah)</span></h2>
-      <div class="venue-box"><table id="vendors"></table></div>
-    </div>
-    <div class="card">
-      <h2>Daftar Order <span class="muted" id="count"></span></h2>
-      <div class="order-box">
-        <div id="orders"></div>
-        <button class="btn" id="more" onclick="showMore()">Tampilkan lebih banyak</button>
-      </div>
-    </div>
-  </div>
+const LA_EVERY_MIN = 5;        // interval pengecekan (menit): 1, 5, 10, 15, atau 30
+const LA_REMIND_MIN = 30;      // jarak pengingat berikutnya (menit)
+const LA_MAX_ALERTS = 3;       // maksimal peringatan per order (30, 60, 90 menit)
+const LA_IGNORE_MIN = 180;     // order yang sudah lebih dari 3 jam diabaikan (kemungkinan lupa ditutup)
+const LA_PROP = 'LA_SENT';
 
-  <!-- DELIVERY BARU -->
-  <div class="tab" id="tab-new">
-    <div class="msg" id="formMsg"></div>
-    <form id="newForm" class="card" onsubmit="submitDelivery(event)">
-      <input type="hidden" name="type" id="f_type" value="Delivery">
-      <div class="seg">
-        <button type="button" class="type-btn active" data-type="Delivery" onclick="setType('Delivery')">Delivery</button>
-        <button type="button" class="type-btn" data-type="Expedition" onclick="setType('Expedition')">Expedition</button>
-      </div>
-      <div class="form-grid">
-        <label><span class="req">Date</span><input type="date" name="date" required></label>
-      </div>
+/* ---------- jadwal ---------- */
+function laRun() {
+  const late = laCheck_();
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty(LA_PROP, JSON.stringify(late.keep));
+  if (late.alerts.length) wrSend_(laMsg_(late.alerts));
+}
 
-      <fieldset id="fs-delivery">
-        <h2 style="margin-top:18px">Order</h2>
-        <div class="form-grid">
-          <label><span class="req">Driver Last Mile</span><select name="driver" id="f_driver" required><option value="">Pilih driver</option></select></label>
-          <label>Order ID<input name="orderId" placeholder="Nomor order"></label>
-          <label><span class="req">Customer Name</span><input name="customer" required></label>
-          <div data-venue="vendor" data-list="vendor" data-label="Vendor" data-req="1"></div>
-          <label>No Vendor<input name="noVendor" placeholder="No. booking vendor"></label>
-          <label>Order Value (Rp)<input type="number" name="orderValue" min="0" step="1" inputmode="numeric"></label>
-        </div>
-        <h2 style="margin-top:18px">Pickup &amp; Dropoff</h2>
-        <div class="form-grid">
-          <div data-venue="pickup" data-label="Pickup" data-req="1"></div>
-          <label>Pickup Time<input type="time" name="pickupTime"></label>
-          <div data-venue="dropoff" data-label="Dropoff" data-req="1"></div>
-          <label class="full">Note<textarea name="note"></textarea></label>
-        </div>
-        <h2 style="margin-top:18px">Foto</h2>
-        <div class="form-grid">
-          <label>Booking Photo<input type="file" accept="image/*" data-photo="booking"><img class="photo-prev" id="prev_booking"></label>
-          <label>Handover<input type="file" accept="image/*" data-photo="handover"><img class="photo-prev" id="prev_handover"></label>
-          <label>Sealing<input type="file" accept="image/*" data-photo="sealing"><img class="photo-prev" id="prev_sealing"></label>
-        </div>
-      </fieldset>
+function laSetupTrigger() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'laRun')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('laRun').timeBased().everyMinutes(LA_EVERY_MIN).create();
+  Logger.log('Trigger aktif: laRun setiap ' + LA_EVERY_MIN + ' menit');
+}
 
-      <fieldset id="fs-exp" disabled style="display:none">
-        <h2 style="margin-top:18px">Paket Ekspedisi</h2>
-        <div class="form-grid">
-          <label><span class="req">Order ID / No. Resi</span><input name="orderId" required></label>
-          <div data-venue="expedition" data-list="exp" data-label="Expedition" data-req="1"></div>
-          <label><span class="req">Name (penerima)</span><input name="name" required></label>
-          <div data-venue="location" data-label="Location" data-req="1"></div>
-          <label>Received (jam terima)<input type="time" name="receivedTime"></label>
-          <label>Payment<select name="payment" id="f_payment" onchange="toggleCod()"><option>Prepaid</option><option>COD</option></select></label>
-          <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span><input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
-          <label class="full"><span class="req">Items (foto barang diterima)</span><input type="file" accept="image/*" id="f_items" required><img class="photo-prev" id="prev_items"></label>
-          <label class="full">Note<textarea name="note"></textarea></label>
-        </div>
-        <p class="muted">Driver tidak dipilih di sini. Nama driver tercatat otomatis dari akun yang mengirim POD.</p>
-      </fieldset>
+/* ---------- uji coba (tidak mengirim, tidak menyimpan) ---------- */
+function laPreview() {
+  const late = laCheck_(true);
+  Logger.log(late.alerts.length ? laMsg_(late.alerts) : 'Tidak ada order telat saat ini.');
+}
 
-      <p class="muted" style="margin-top:14px">Status otomatis <b id="statusInfo">On Delivery</b> setelah submit. Created by terisi otomatis dari email login Anda.</p>
-      <button class="btn" id="submitBtn" style="width:100%;padding:12px">Submit</button>
-    </form>
-  </div>
+/* ---------- inti ---------- */
+function laCheck_(all) {
+  const ss = SpreadsheetApp.getActive();
+  const tz = ss.getSpreadsheetTimeZone();
+  const now = new Date();
+  const sent = JSON.parse(PropertiesService.getScriptProperties().getProperty(LA_PROP) || '{}');
+  const keep = {}, alerts = [];
 
-  <!-- ON DELIVERY -->
-  <div class="tab" id="tab-active">
-    <div class="msg" id="activeMsg"></div>
-    <div class="filters">
-      <label>Driver<select id="a_driver" onchange="store('lm_activeDriver', this.value);renderActive()"><option value="">Semua driver</option></select></label>
-      <label>Type<select id="a_type" onchange="renderActive()"><option value="">Semua</option><option>Delivery</option><option>Expedition</option></select></label>
-    </div>
-    <div id="activeList"><p class="muted">Memuat...</p></div>
-  </div>
+  readSheet_(ss.getSheetByName(SHEET_NAME), tz)
+    .filter(o => o['System ID'] && String(o['Status'] || '').trim() === DELIVERY_ACTIVE)
+    .forEach(o => {
+      const start = laStart_(o, tz);
+      if (!start) return;
+      const min = Math.floor((now - start) / 60000);
+      const id = String(o['System ID']);
+      const done = sent[id] || 0;
+      if (done) keep[id] = done;
+      if (min < SLA_MINUTES || min > LA_IGNORE_MIN) return;
+      const level = Math.min(LA_MAX_ALERTS, Math.floor((min - SLA_MINUTES) / LA_REMIND_MIN) + 1);
+      if (all || level > done) {
+        alerts.push({ o: o, min: min, level: level, start: start });
+        keep[id] = Math.max(done, level);
+      }
+    });
+  return { alerts: alerts, keep: keep };
+}
 
-  <!-- AIR MINERAL -->
-  <div class="tab" id="tab-water">
-    <div class="msg" id="waterMsg"></div>
-    <div class="filters">
-      <label>Dari<input type="date" id="w_from" onchange="loadWater()"></label>
-      <label>Sampai<input type="date" id="w_to" onchange="loadWater()"></label>
-    </div>
-    <div class="card">
-      <h2>Stok Seharusnya Tersedia <span class="muted">(1 slot = 12 botol)</span></h2>
-      <div class="stock-grid" id="w_stock"></div>
-      <p class="muted" style="margin:10px 0 0">Restock masuk ke Gudang, Isi Showcase memindahkan stok dari Gudang ke Showcase, dan Penjualan mengurangi stok Showcase.</p>
-    </div>
+// Waktu mulai = tanggal (kolom Date) + jam dari Pickup Time (mendukung "1:15:00 PM")
+function laStart_(o, tz) {
+  const raw = String(o['Pickup Time'] || '');
+  const dm = raw.match(/\d{4}-\d{2}-\d{2}/);
+  const date = dm ? dm[0] : String(o['Date'] || '').slice(0, 10);
+  const hm = lrHM_(raw);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hm) return null;
+  return Utilities.parseDate(date + ' ' + hm, tz, 'yyyy-MM-dd HH:mm');
+}
 
-    <div class="kpis" id="w_kpis"></div>
-
-    <div class="card">
-      <h2>Penjualan per Tim</h2>
-      <div class="pay-grid" id="w_team"></div>
-    </div>
-
-    <div class="card">
-      <h2>Penjualan per Metode Bayar</h2>
-      <div class="pay-grid" id="w_pay"></div>
-    </div>
-
-    <div class="two">
-      <form class="card" onsubmit="submitWaterSale(event)">
-        <h2>Input Penjualan</h2>
-        <div class="form-grid">
-          <label><span class="req">Tanggal</span><input type="date" id="ws_date" required></label>
-          <label><span class="req">Qty (botol)</span><input type="number" id="ws_qty" min="1" step="1" inputmode="numeric" required oninput="wsTotal()"></label>
-          <label><span class="req">Harga / botol (Rp)</span><input type="number" id="ws_price" min="0" step="1" inputmode="numeric" required oninput="wsTotal()"></label>
-        </div>
-        <label style="margin-top:12px"><span class="req">Pembayaran</span></label>
-        <div class="seg" id="ws_pay" style="margin-top:4px"></div>
-        <input type="hidden" id="ws_payment" value="Cash">
-        <label>Catatan<input id="ws_notes" placeholder="Opsional"></label>
-        <div class="total-line"><span>Total</span><span id="ws_total">Rp 0</span></div>
-        <p class="muted" id="ws_who" style="margin:6px 0 0"></p>
-        <button class="btn" id="ws_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Penjualan</button>
-      </form>
-
-      <form class="card owner-only" onsubmit="submitWaterRestock(event)">
-        <h2>Input Restock</h2>
-        <div class="form-grid">
-          <label><span class="req">Tanggal</span><input type="date" id="wr_date" required></label>
-          <label><span class="req">Qty (botol)</span><input type="number" id="wr_qty" min="1" step="1" inputmode="numeric" required oninput="wrTotal()"><span class="muted" id="wr_conv"></span></label>
-          <label><span class="req">Harga beli / botol (Rp)</span><input type="number" id="wr_cost" min="0" step="1" inputmode="numeric" required oninput="wrTotal()"></label>
-          <label>Harga jual / botol (Rp)<input type="number" id="wr_price" min="0" step="1" inputmode="numeric"></label>
-        </div>
-        <label style="margin-top:12px">Catatan<input id="wr_notes" placeholder="Opsional, mis. supplier"></label>
-        <div class="total-line"><span>Total biaya</span><span id="wr_total">Rp 0</span></div>
-        <p class="muted" style="margin:6px 0 0">Restock masuk ke stok Gudang.</p>
-        <button class="btn" id="wr_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Restock</button>
-      </form>
-
-      <form class="card" onsubmit="submitWaterMove(event)">
-        <h2>Isi Showcase (dari Gudang)</h2>
-        <div class="form-grid">
-          <label><span class="req">Tanggal</span><input type="date" id="wm_date" required></label>
-          <label><span class="req">Qty (botol)</span><input type="number" id="wm_qty" min="1" step="1" inputmode="numeric" required oninput="wmConv()"><span class="muted" id="wm_conv"></span></label>
-        </div>
-        <label style="margin-top:12px">Catatan<input id="wm_notes" placeholder="Opsional"></label>
-        <p class="muted" style="margin:10px 0 0">Stok Gudang berkurang, stok Showcase bertambah.</p>
-        <button class="btn" id="wm_btn" style="width:100%;padding:12px;margin-top:12px">Simpan Isi Showcase</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Setoran Cash Last Mile <span class="muted">(cash hasil jual Last Mile diserahkan ke tim Taxi)</span></h2>
-      <div class="scroll"><table id="w_dep"></table></div>
-      <form onsubmit="submitWaterDeposit(event)" style="margin-top:14px">
-        <div class="form-grid">
-          <label><span class="req">Tanggal</span><input type="date" id="wd_date" required></label>
+function laMsg_(alerts) {
+  const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
+  const blocks = alerts.sort((a, b) => b.min - a.min).map(x => {
+    const o = x.o;
+    return [
+      wrPad_('Order', 9) + (o['Order ID'] || o['System ID']),
+      wrPad_('Driver', 9) + (o['Driver Last Mile'] || '-'),
+      wrPad_('To', 9) + (o['Dropoff'] || '-'),
+      wrPad_('Vendor', 9) + (o['Vendor'] || '-'),
+      wrPad_('Pickup', 9) + Utilities.formatDate(x.start, tz, 'HH:mm') + '  (' + x.min + ' min ago)'
+    ].join('\n');
+  });
+  const first = alerts.every(x => x.level === 1);
+  return '<b>LATE DELIVERY ALERT</b>\n'
+    + '<i>' + (first ? 'Still on delivery after ' + SLA_MINUTES + ' min (SLA).' : 'Still not delivered. Please follow up.') + '</i>\n\n'
+    + '<pre>' + wrEsc_(blocks.join('\n\n')) + '</pre>\n'
+    + 'Send the POD in the web app once delivered.';
+}
