@@ -359,6 +359,22 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
   <div class="modal" id="detailBody"></div>
 </div>
 
+<div class="overlay" id="edit" onclick="if(event.target===this)closeEdit()">
+  <div class="modal" style="max-width:560px">
+    <h3 id="editTitle">Edit Order</h3>
+    <div id="editInfo" class="muted" style="margin-bottom:12px"></div>
+    <form id="editForm" onsubmit="submitEdit(event)">
+      <div class="form-grid" id="editFields"></div>
+      <h2 style="margin:16px 0 8px;font-size:14px">Foto</h2>
+      <div class="form-grid" id="editPhotos"></div>
+      <p class="muted" style="margin-top:12px">Foto yang belum ada bisa ditambahkan, foto yang sudah ada tidak bisa diganti. Jam pickup/received tidak bisa diubah. Setelah POD dikirim, order tidak bisa diedit lagi.</p>
+      <div class="msg" id="editMsg" style="margin-top:12px"></div>
+      <button class="btn" id="editBtn" style="margin-top:14px;width:100%;padding:12px">Simpan Perubahan</button>
+      <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closeEdit()">Batal</button>
+    </form>
+  </div>
+</div>
+
 <div class="overlay" id="fin" onclick="if(event.target===this)closeFin()">
   <div class="modal" style="max-width:440px">
     <h3 id="finTitle"></h3>
@@ -382,7 +398,7 @@ const PAGE = 100;
 const PHOTO_COLS = ['Items Photo','Booking Photo','Handover','Sealing','POD Photo'];
 const EXP_LABEL = {'Vendor':'Expedition','Customer Name':'Name','Dropoff':'Location','Pickup Time':'Received','Dropoff Time':'Delivery','Driver Last Mile':'Rider','Order Value':'Amount','POD Photo':'Proof of Delivery','Items Photo':'Items'};
 
-let ROWS = [], FILTERED = [], ACTIVE = [], VIS = [], shown = PAGE, FIN = null;
+let ROWS = [], FILTERED = [], ACTIVE = [], VIS = [], shown = PAGE, FIN = null, EDIT = null, DRIVERS = [];
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
@@ -962,6 +978,7 @@ async function loadOptions() {
     const o = await api({ action: 'options' });
     if (!o.ok) return;
     const fill = (id, list) => { $(id).innerHTML = list.map(v => '<option value="' + esc(v) + '">').join(''); };
+    DRIVERS = o.drivers || [];
     const opts = o.drivers.map(v => '<option>' + esc(v) + '</option>').join('');
     const cur = $('#f_driver').value;
     $('#f_driver').innerHTML = '<option value="">Pilih driver</option>' + opts;
@@ -1094,7 +1111,8 @@ function renderActive() {
       + '<div class="s">' + sub + '</div>'
       + '<div class="s">' + when + note + '</div>' + cod
       + '<div class="row">' + el
-      + '<div class="acts"><button class="btn danger" onclick="openFin(' + i + ',\'Rejected\')">Rejected</button>'
+      + '<div class="acts"><button class="btn ghost" onclick="openEdit(' + i + ')">Edit</button>'
+      + '<button class="btn danger" onclick="openFin(' + i + ',\'Rejected\')">Rejected</button>'
       + '<button class="btn" onclick="openFin(' + i + ',\'Delivered\')">Kirim POD</button></div>'
       + '</div></div>';
   }).join('');
@@ -1129,6 +1147,84 @@ function openFin(i, result) {
   $('#fin').classList.add('show');
 }
 function closeFin() { $('#fin').classList.remove('show'); FIN = null; }
+
+/* ===== EDIT ORDER AKTIF ===== */
+function openEdit(i) {
+  const r = VIS[i];
+  if (!r) return;
+  const isExp = r.Type === 'Expedition';
+  EDIT = { r: r };
+  const v = k => esc(r[k] || '');
+  const digits = k => String(r[k] || '').replace(/[^\d]/g, '');
+  const inp = (name, label, val, req, extra) => '<label><span' + (req ? ' class="req"' : '') + '>' + label + '</span><input name="' + name + '" value="' + val + '"' + (req ? ' required' : '') + (extra || '') + '></label>';
+  let html;
+  if (isExp) {
+    const cod = /cod/i.test(r['Payment'] || '');
+    html = inp('orderId', 'Order ID / No. Resi', v('Order ID'), true)
+      + inp('expedition', 'Expedition', v('Vendor'), true, ' list="dl_exp"')
+      + inp('name', 'Name (penerima)', v('Customer Name'), true)
+      + inp('location', 'Location', v('Dropoff'), true, ' list="dl_location"')
+      + '<label>Payment<select name="payment" id="e_payment"><option' + (cod ? '' : ' selected') + '>Prepaid</option><option' + (cod ? ' selected' : '') + '>COD</option></select></label>'
+      + inp('amount', 'Amount COD (Rp)', esc(digits('Order Value')), false, ' type="number" min="0" step="1" inputmode="numeric"');
+  } else {
+    const drivers = DRIVERS.indexOf(r['Driver Last Mile']) >= 0 || !r['Driver Last Mile'] ? DRIVERS : [r['Driver Last Mile']].concat(DRIVERS);
+    html = '<label><span class="req">Driver Last Mile</span><select name="driver" required>'
+      + drivers.map(d => '<option' + (d === r['Driver Last Mile'] ? ' selected' : '') + '>' + esc(d) + '</option>').join('') + '</select></label>'
+      + inp('orderId', 'Order ID', v('Order ID'), false)
+      + inp('customer', 'Customer Name', v('Customer Name'), true)
+      + inp('vendor', 'Vendor', v('Vendor'), true, ' list="dl_vendor"')
+      + inp('noVendor', 'No Vendor', v('No Vendor'), false)
+      + inp('orderValue', 'Order Value (Rp)', esc(digits('Order Value')), false, ' type="number" min="0" step="1" inputmode="numeric"')
+      + inp('pickup', 'Pickup', v('Pickup'), true, ' list="dl_pickup"')
+      + inp('dropoff', 'Dropoff', v('Dropoff'), true, ' list="dl_location"')
+      + '<label class="full">Note<textarea name="note">' + v('Note') + '</textarea></label>';
+  }
+  $('#editFields').innerHTML = html;
+  const PH = isExp ? [['items', 'Items Photo', 'Items (foto barang diterima)']]
+    : [['booking', 'Booking Photo', 'Booking Photo'], ['handover', 'Handover', 'Handover'], ['sealing', 'Sealing', 'Sealing']];
+  $('#editPhotos').innerHTML = PH.map(p => {
+    const u = photoUrl(r[p[1]]);
+    if (r[p[1]]) return '<label>' + p[2] + (u ? '<a href="' + esc(u) + '" target="_blank"><img class="photo-prev" style="display:block" src="' + esc(u) + '" alt="' + p[2] + '"></a>' : '<span class="muted">Sudah ada</span>') + '</label>';
+    return '<label>' + p[2] + ' <span class="muted">(belum ada)</span><input type="file" accept="image/*" capture="environment" data-ephoto="' + p[0] + '"><img class="photo-prev" id="eprev_' + p[0] + '"></label>';
+  }).join('');
+  $$('#editPhotos input[data-ephoto]').forEach(inp => previewOn(inp, $('#eprev_' + inp.dataset.ephoto)));
+  $('#editTitle').textContent = 'Edit ' + (isExp ? 'Expedition' : 'Delivery');
+  $('#editInfo').innerHTML = typeBadge(r) + esc(r['Order ID'] || r['System ID']) + ' · ' + esc(r['Status']);
+  $('#editMsg').className = 'msg';
+  $('#edit').classList.add('show');
+}
+function closeEdit() { $('#edit').classList.remove('show'); EDIT = null; }
+
+async function submitEdit(ev) {
+  ev.preventDefault();
+  if (!EDIT) return;
+  const r = EDIT.r, isExp = r.Type === 'Expedition';
+  const fields = Object.fromEntries(new FormData($('#editForm')).entries());
+  if (isExp && fields.payment === 'COD' && !fields.amount) {
+    $('#editMsg').textContent = 'Amount wajib diisi untuk COD';
+    $('#editMsg').className = 'msg err';
+    return;
+  }
+  const btn = $('#editBtn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  $('#editMsg').className = 'msg';
+  try {
+    const photos = {};
+    for (const inp of $$('#editPhotos input[data-ephoto]')) {
+      if (inp.files[0]) photos[inp.dataset.ephoto] = await compress(inp.files[0]);
+    }
+    const out = await post('edit', { type: r.Type, id: isExp ? r['Order ID'] : r['System ID'], fields: fields, photos: photos });
+    closeEdit();
+    $('#activeMsg').textContent = 'Order ' + out.id + ' berhasil diubah.';
+    $('#activeMsg').className = 'msg ok';
+    loadActive(); load();
+  } catch (err) {
+    $('#editMsg').textContent = 'Gagal: ' + err.message;
+    $('#editMsg').className = 'msg err';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Simpan Perubahan';
+  }
+}
 
 async function submitFin(ev) {
   ev.preventDefault();
