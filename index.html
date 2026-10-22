@@ -24,6 +24,9 @@ main{max-width:1100px;margin:0 auto;padding:16px}
 .btn.red{background:var(--bad);color:#fff}
 .btn:disabled{opacity:.6;cursor:wait}
 .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 16px}
+.presets .btn{padding:6px 12px;font-size:13px}
+.presets .btn.on{background:var(--brand);color:#fff}
 label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 input,select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;width:100%;color:var(--text)}
 textarea{min-height:70px;resize:vertical}
@@ -141,12 +144,19 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
   <!-- DASHBOARD -->
   <div class="tab active" id="tab-dash">
     <div class="filters">
-      <label>Dari<input type="date" id="from" onchange="load()"></label>
-      <label>Sampai<input type="date" id="to" onchange="load()"></label>
+      <label>Dari<input type="date" id="from" onchange="markPreset();load()"></label>
+      <label>Sampai<input type="date" id="to" onchange="markPreset();load()"></label>
       <label>Type<select id="type" onchange="render()"><option value="">Semua</option><option>Delivery</option><option>Expedition</option></select></label>
       <label>Driver<select id="driver" onchange="render()"><option value="">Semua</option></select></label>
       <label>Status<select id="status" onchange="render()"><option value="">Semua</option></select></label>
       <label>Cari<input type="search" id="q" placeholder="Order ID, nama, lokasi..." oninput="render()"></label>
+    </div>
+    <div class="presets" id="presets">
+      <button class="btn ghost" data-range="today" onclick="setRange('today')">Hari ini</button>
+      <button class="btn ghost" data-range="yesterday" onclick="setRange('yesterday')">Kemarin</button>
+      <button class="btn ghost" data-range="7d" onclick="setRange('7d')">7 hari terakhir</button>
+      <button class="btn ghost" data-range="month" onclick="setRange('month')">Bulan ini</button>
+      <button class="btn ghost" data-range="lastmonth" onclick="setRange('lastmonth')">Bulan lalu</button>
     </div>
     <div class="kpis" id="kpis"></div>
     <div class="card">
@@ -473,11 +483,36 @@ function previewOn(input, img) {
   });
 }
 
+/* ===== RENTANG TANGGAL DASHBOARD ===== */
+// Dashboard selalu dibuka di "Hari ini"; pilih tombol lain atau ubah tanggal untuk melihat riwayat.
+function rangeOf(k) {
+  const t = new Date(), y = t.getFullYear(), m = t.getMonth(), d = t.getDate();
+  if (k === 'yesterday') return [new Date(y, m, d - 1), new Date(y, m, d - 1)];
+  if (k === '7d') return [new Date(y, m, d - 6), t];
+  if (k === 'month') return [new Date(y, m, 1), t];
+  if (k === 'lastmonth') return [new Date(y, m - 1, 1), new Date(y, m, 0)];
+  return [t, t];
+}
+function markPreset() {
+  const f = $('#from').value, to = $('#to').value;
+  $$('#presets button').forEach(b => {
+    const r = rangeOf(b.dataset.range);
+    b.classList.toggle('on', ymd(r[0]) === f && ymd(r[1]) === to);
+  });
+}
+function setRange(k) {
+  const r = rangeOf(k);
+  $('#from').value = ymd(r[0]);
+  $('#to').value = ymd(r[1]);
+  markPreset();
+  load();
+}
+
 function init() {
-  const today = new Date(), start = new Date();
-  start.setDate(today.getDate() - 6);
-  $('#from').value = ymd(start);
+  const today = new Date();
+  $('#from').value = ymd(today);
   $('#to').value = ymd(today);
+  markPreset();
   setType(store('lm_type') || 'Delivery');
   $$('input[data-photo]').forEach(inp => previewOn(inp, $('#prev_' + inp.dataset.photo)));
   previewOn($('#f_items'), $('#prev_items'));
