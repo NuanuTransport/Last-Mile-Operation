@@ -385,7 +385,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 22 Okt 2026 (g)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 23 Okt 2026 (h)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -1201,11 +1201,14 @@ function pickField(kind, name, label, req, val) {
   const list = LISTS[kind], ph = LIST_PH[kind];
   val = String(val || '').trim();
   const other = !!val && list.indexOf(val) < 0;
+  const otherOpt = '<option value="__other"' + (other ? ' selected' : '') + '>Lainnya (ketik sendiri)</option>';
+  const otherTop = kind === 'venue';   // Pickup, Dropoff, Location: "Lainnya" paling atas
   return '<label><span' + (req ? ' class="req"' : '') + '>' + label + '</span>'
     + '<select class="venue-sel"' + (req ? ' required' : '') + ' onchange="venuePick(this)">'
     + '<option value="">' + ph[0] + '</option>'
+    + (otherTop ? otherOpt : '')
     + list.map(v => '<option' + (v === val ? ' selected' : '') + '>' + esc(v) + '</option>').join('')
-    + '<option value="__other"' + (other ? ' selected' : '') + '>Lainnya (ketik sendiri)</option></select>'
+    + (otherTop ? '' : otherOpt) + '</select>'
     + '<input name="' + name + '" class="venue-txt" placeholder="' + ph[1] + '" value="' + esc(val) + '"'
     + (other ? (req ? ' required' : '') : ' style="display:none"') + '></label>';
 }
