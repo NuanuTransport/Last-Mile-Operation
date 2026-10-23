@@ -146,6 +146,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 @media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
 /* ===== REPORT HARIAN (PDF) ===== */
 .sig-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.sig-in input:disabled{background:#f3f4f6;color:var(--text);-webkit-text-fill-color:var(--text);opacity:1}
 .rp-btns{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 .report{color:#111}
 .rp-head{text-align:center;margin-bottom:14px}
@@ -342,9 +343,12 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       </div>
       <h2 style="margin:4px 0 8px">Tanda Tangan</h2>
       <div class="sig-in">
-        <input id="rp_s1" placeholder="Prepared by – nama" oninput="rpSig()"><input id="rp_p1" placeholder="Jabatan" oninput="rpSig()">
-        <input id="rp_s2" placeholder="Checked by – nama" oninput="rpSig()"><input id="rp_p2" placeholder="Jabatan" oninput="rpSig()">
-        <input id="rp_s3" placeholder="Approved by – nama" oninput="rpSig()"><input id="rp_p3" placeholder="Jabatan" oninput="rpSig()">
+        <label>Prepared by<select id="rp_s1" onchange="rpSig()"><option value="">Pilih driver</option></select></label>
+        <label>Jabatan<input id="rp_p1" placeholder="Jabatan" oninput="rpSig()"></label>
+        <label>Checked by<input id="rp_s2" disabled></label>
+        <label>Jabatan<input id="rp_p2" disabled></label>
+        <label>Approved by<input id="rp_s3" disabled></label>
+        <label>Jabatan<input id="rp_p3" disabled></label>
       </div>
       <div class="rp-btns">
         <button class="btn" style="padding:12px" onclick="printReport()">Print / Save PDF</button>
@@ -447,7 +451,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 23 Okt 2026 (j)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 23 Okt 2026 (k)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -1024,13 +1028,29 @@ function openDay(key) {
 const RP = { rows: [], date: '', at: null, water: null };
 const DAY_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const SIG_ID = ['rp_s1', 'rp_p1', 'rp_s2', 'rp_p2', 'rp_s3', 'rp_p3'];
+// Checked by & Approved by tetap (tidak bisa diubah di aplikasi)
+const SIG_FIXED = {
+  2: ['Ni Putu Angie Friska Nanda', 'External Site Supervisor'],
+  3: ['I Dewa Gede Windhu Wicaksana', 'Manager Assistant']
+};
+const SIG_POS_DEFAULT = 'Driver Last Mile';
 function initReport() {
   $('#rp_date').value = ymd(new Date());
-  SIG_ID.forEach(id => { $('#' + id).value = store('lm_' + id); });
+  $('#rp_p1').value = store('lm_rp_p1') || SIG_POS_DEFAULT;
+  [2, 3].forEach(k => { $('#rp_s' + k).value = SIG_FIXED[k][0]; $('#rp_p' + k).value = SIG_FIXED[k][1]; });
+  rpDrivers([]);
+}
+// Isi dropdown Prepared by dengan nama driver
+function rpDrivers(list) {
+  const sel = $('#rp_s1'), cur = sel.value || store('lm_rp_s1');
+  const names = list.slice();
+  if (cur && names.indexOf(cur) < 0) names.unshift(cur);
+  sel.innerHTML = '<option value="">Pilih driver</option>' + names.map(v => '<option>' + esc(v) + '</option>').join('');
+  sel.value = cur;
 }
 function rpSig() {
-  SIG_ID.forEach(id => store('lm_' + id, $('#' + id).value));
+  store('lm_rp_s1', $('#rp_s1').value);
+  store('lm_rp_p1', $('#rp_p1').value);
   const el = $('#rp_sigBlock');
   if (el) el.innerHTML = rpSigHtml();
 }
@@ -1506,6 +1526,7 @@ async function loadOptions() {
     if (cur) $('#f_driver').value = cur;
     $('#a_driver').innerHTML = '<option value="">Semua driver</option>' + opts;
     $('#a_driver').value = store('lm_activeDriver');
+    rpDrivers(DRIVERS);
     fill('#dl_vendor', o.vendors || []);
     fill('#dl_pickup', o.pickups || []);
     fill('#dl_location', o.locations || []);
