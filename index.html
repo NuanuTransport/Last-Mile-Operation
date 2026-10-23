@@ -144,6 +144,44 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .owe{color:var(--bad);font-weight:700}
 .s-N{background:#ede9fe;color:#6d28d9}.s-MID{background:#ccfbf1;color:#0f766e}.s-EO{background:#fce7f3;color:#be185d}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
 @media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
+/* ===== REPORT HARIAN (PDF) ===== */
+.sig-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.rp-btns{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.report{color:#111}
+.rp-head{text-align:center;margin-bottom:14px}
+.rp-head h1{font-size:18px;margin:0}
+.rp-head .sub{font-size:12px;color:#555;margin-top:4px}
+.rp-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:6px}
+.rp-kpi{border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center}
+.rp-kpi .l{font-size:11px;color:#555}
+.rp-kpi .v{font-size:16px;font-weight:700;margin-top:2px}
+.report h3{font-size:13px;margin:18px 0 6px}
+.rp-part{font-size:15px;margin:22px 0 10px;padding:6px 10px;background:#0f766e;color:#fff;border-radius:6px}
+@media print{.rp-part{break-after:avoid}.rp-water{break-before:page}}
+.report table{font-size:12px;border:1px solid #cbd5d1}
+.report th{background:#e6f2ef;color:#1d2330;border:1px solid #cbd5d1;padding:5px 6px}
+.report td{border:1px solid #e1e7e5;white-space:normal;padding:5px 6px}
+.report .n{text-align:right}
+.report tfoot td{background:#f3f4f6}
+.report tr.late td{background:#fff7ed}
+.report tr.rej td{background:#fef2f2}
+.rp-sig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:30px;text-align:center;font-size:12px}
+.rp-sig .line{height:64px;border-bottom:1px solid #333;margin:6px 8px}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff;font-size:10px}
+  header,nav,.no-print,.overlay,main>p.muted{display:none!important}
+  main{padding:0;max-width:none}
+  .tab{display:none!important}
+  #tab-report{display:block!important}
+  .report{border:0;padding:0;margin:0}
+  .report table{font-size:9.5px}
+  .report th,.report td{padding:3px 4px}
+  .scroll{overflow:visible}
+  .report tr,.rp-kpis,.rp-sig{break-inside:avoid}
+  .report thead{display:table-header-group}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -181,6 +219,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <button class="btn ghost" data-range="7d" onclick="setRange('7d')">7 hari terakhir</button>
       <button class="btn ghost" data-range="month" onclick="setRange('month')">Bulan ini</button>
       <button class="btn ghost" data-range="lastmonth" onclick="setRange('lastmonth')">Bulan lalu</button>
+      <button class="btn" style="margin-left:auto" onclick="openReport()">Report Harian (PDF)</button>
     </div>
     <div class="kpis" id="kpis"></div>
     <div class="card">
@@ -292,6 +331,29 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
     <div id="activeList"><p class="muted">Memuat...</p></div>
   </div>
 
+  <!-- REPORT HARIAN -->
+  <div class="tab" id="tab-report">
+    <div class="card no-print">
+      <button class="btn ghost" style="margin-bottom:12px" onclick="showTab('dash')">&lsaquo; Kembali ke Dashboard</button>
+      <h2>Report Harian Last Mile &amp; Air Mineral</h2>
+      <div class="filters">
+        <label>Tanggal<input type="date" id="rp_date" onchange="loadReport()"></label>
+        <label>Type (Last Mile)<select id="rp_type" onchange="renderReport()"><option value="">Semua</option><option>Delivery</option><option>Expedition</option></select></label>
+      </div>
+      <h2 style="margin:4px 0 8px">Tanda Tangan</h2>
+      <div class="sig-in">
+        <input id="rp_s1" placeholder="Prepared by – nama" oninput="rpSig()"><input id="rp_p1" placeholder="Jabatan" oninput="rpSig()">
+        <input id="rp_s2" placeholder="Checked by – nama" oninput="rpSig()"><input id="rp_p2" placeholder="Jabatan" oninput="rpSig()">
+        <input id="rp_s3" placeholder="Approved by – nama" oninput="rpSig()"><input id="rp_p3" placeholder="Jabatan" oninput="rpSig()">
+      </div>
+      <div class="rp-btns">
+        <button class="btn" style="padding:12px" onclick="printReport()">Print / Save PDF</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Di HP: tekan Print / Save PDF, lalu pilih Simpan sebagai PDF (Android) atau tombol Share lalu Save to Files (iPhone).</p>
+    </div>
+    <div class="card report" id="rp_doc"><p class="muted">Pilih tanggal.</p></div>
+  </div>
+
   <!-- AIR MINERAL -->
   <div class="tab" id="tab-water">
     <div class="msg" id="waterMsg"></div>
@@ -385,7 +447,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 23 Okt 2026 (h)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 23 Okt 2026 (j)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -512,6 +574,7 @@ function showTab(t) {
   $$('.tab').forEach(x => x.classList.toggle('active', x.id === 'tab-' + t));
   if (t === 'active') loadActive();
   if (t === 'water') loadWater();
+  if (t === 'report') loadReport();
   window.scrollTo(0, 0);
 }
 
@@ -535,7 +598,7 @@ function rangeOf(k) {
 }
 function markPreset() {
   const f = $('#from').value, to = $('#to').value;
-  $$('#presets button').forEach(b => {
+  $$('#presets button[data-range]').forEach(b => {
     const r = rangeOf(b.dataset.range);
     b.classList.toggle('on', ymd(r[0]) === f && ymd(r[1]) === to);
   });
@@ -559,6 +622,7 @@ function init() {
   previewOn($('#f_items'), $('#prev_items'));
   previewOn($('#finPhoto'), $('#prev_fin'));
   initWater();
+  initReport();
   const t = getTok();
   if (!t) { showLogin(); return; }
   $('#userEmail').textContent = tokEmail(t);
@@ -956,6 +1020,208 @@ function openDay(key) {
   $('#detail').classList.add('show');
 }
 
+/* ===== REPORT HARIAN (PDF) ===== */
+const RP = { rows: [], date: '', at: null, water: null };
+const DAY_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const SIG_ID = ['rp_s1', 'rp_p1', 'rp_s2', 'rp_p2', 'rp_s3', 'rp_p3'];
+function initReport() {
+  $('#rp_date').value = ymd(new Date());
+  SIG_ID.forEach(id => { $('#' + id).value = store('lm_' + id); });
+}
+function rpSig() {
+  SIG_ID.forEach(id => store('lm_' + id, $('#' + id).value));
+  const el = $('#rp_sigBlock');
+  if (el) el.innerHTML = rpSigHtml();
+}
+function rpSigHtml() {
+  return [['Prepared by', 1], ['Checked by', 2], ['Approved by', 3]].map(x =>
+    '<div>' + x[0] + '<div class="line"></div><b>' + (esc($('#rp_s' + x[1]).value.trim()) || '&nbsp;') + '</b><br>'
+    + (esc($('#rp_p' + x[1]).value.trim()) || '&nbsp;') + '</div>').join('');
+}
+async function loadReport() {
+  const d = $('#rp_date').value;
+  if (!d || !getTok()) return;
+  $('#rp_doc').innerHTML = '<p class="muted">Memuat...</p>';
+  try {
+    const both = await Promise.all([api({ from: d, to: d }), api({ action: 'water', from: d, to: d }).catch(() => null)]);
+    const data = both[0], water = both[1];
+    if (!data.ok) { if (data.error !== 'unauthorized') $('#rp_doc').innerHTML = '<p class="muted">Error: ' + esc(data.error) + '</p>'; return; }
+    if ($('#rp_date').value !== d) return;
+    RP.rows = data.rows || []; RP.date = d; RP.at = new Date();
+    RP.water = water && water.ok ? water : null;
+    const m = d.slice(0, 7);
+    if (!DUTY.months[m]) {
+      try {
+        const s = await api({ action: 'schedule', month: m });
+        if (s.ok) { DUTY.months[m] = s.items || []; Object.assign(DUTY.shifts, s.shifts || {}); }
+      } catch (e) {}
+    }
+    renderReport();
+  } catch (e) {
+    $('#rp_doc').innerHTML = '<p class="muted">Gagal memuat data.</p>';
+  }
+}
+function rpGroup(L, keyFn) {
+  const g = {};
+  L.forEach(r => { const k = keyFn(r) || '(blank)'; (g[k] = g[k] || []).push(r); });
+  return Object.keys(g).map(k => ({ k: k, L: g[k] })).sort((a, b) => b.L.length - a.L.length || a.k.localeCompare(b.k));
+}
+function rpTable(head, rows, foot, empty) {
+  const th = head.map(h => '<th' + (h[1] ? ' class="n"' : '') + '>' + h[0] + '</th>').join('');
+  const body = rows.length ? rows.join('') : '<tr><td colspan="' + head.length + '">' + empty + '</td></tr>';
+  return '<div class="scroll"><table><thead><tr>' + th + '</tr></thead><tbody>' + body + '</tbody>'
+    + (foot && rows.length ? '<tfoot><tr>' + foot + '</tr></tfoot>' : '') + '</table></div>';
+}
+function renderReport() {
+  if (!RP.date) return;
+  const ty = $('#rp_type').value;
+  const L = RP.rows.filter(r => !ty || r.Type === ty).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  const d = new Date(RP.date + 'T00:00:00');
+  const dateTxt = DAY_EN[d.getDay()] + ', ' + d.getDate() + ' ' + MON_EN[d.getMonth()] + ' ' + d.getFullYear();
+  const st = r => String(r['Status'] || '').toLowerCase();
+  const cnt = s => L.filter(r => st(r) === s).length;
+  const onT = L.filter(isOnTime).length, late = L.filter(isLate).length;
+  const isToday = RP.date === ymd(new Date());
+  const gen = RP.at.getDate() + ' ' + MON_EN[RP.at.getMonth()].slice(0, 3) + ' ' + RP.at.getFullYear() + ', ' + hm(RP.at);
+  const n = v => '<td class="n">' + v + '</td>';
+  const kp = [['Total Orders', L.length], ['Delivered', cnt('delivered')], ['Rejected', cnt('rejected')],
+    ['Not finished', cnt('on delivery') + cnt('stored')], ['On Time Rate', pct(onT, onT + late)], ['Avg Duration', avgDur(L)]];
+
+  // 1. per driver
+  const drv = rpGroup(L, r => r['Driver Last Mile'] || '(not assigned)').map(x => {
+    const a = x.L, o = a.filter(isOnTime).length, l = a.filter(isLate).length;
+    return '<tr><td>' + esc(x.k) + '</td>' + n(a.length) + n(a.filter(r => st(r) === 'delivered').length)
+      + n(a.filter(r => st(r) === 'rejected').length) + n(o) + n(l) + n(pct(o, o + l)) + n(avgDur(a)) + '</tr>';
+  });
+  const drvFoot = '<td><b>TOTAL</b></td>' + n(L.length) + n(cnt('delivered')) + n(cnt('rejected')) + n(onT) + n(late) + n(pct(onT, onT + late)) + n(avgDur(L));
+
+  // 2. per vendor
+  const vlist = VENDORS.concat(EXPEDITION_LIST);
+  const ven = rpGroup(L, r => canonName(r['Vendor'], vlist)).map(x => {
+    const de = x.L.filter(r => r.Type !== 'Expedition').length;
+    return '<tr><td>' + esc(x.k) + '</td>' + n(de) + n(x.L.length - de) + n(x.L.length) + '</tr>';
+  });
+
+  // 3. per venue
+  const vnu = rpGroup(L, r => canonName(r['Dropoff'], VENUES)).map(x => {
+    const o = x.L.filter(isOnTime).length, l = x.L.filter(isLate).length;
+    return '<tr><td>' + esc(x.k) + '</td>' + n(x.L.length) + n(pct(o, o + l)) + n(avgDur(x.L)) + '</tr>';
+  });
+
+  // 4. per jam + driver on duty
+  const duty = (DUTY.months[RP.date.slice(0, 7)] || []).filter(x => x.date === RP.date && !/admin/i.test(x.position || ''));
+  const onDuty = duty.filter(x => !isOff(x.shift)).sort(calSort);
+  const perH = {};
+  onDuty.forEach(x => { const h = shiftHours(x.shift); if (h) for (let i = h[0]; i < h[1]; i++) perH[i] = (perH[i] || 0) + 1; });
+  const hc = {};
+  L.forEach(r => { const t = timeOf(r['Pickup Time']); if (t) { const h = Number(t.slice(0, 2)); hc[h] = (hc[h] || 0) + 1; } });
+  const hrs = Object.keys(hc).map(Number).sort((a, b) => a - b);
+  const hrRows = hrs.map(h => '<tr><td>' + pad(h) + ':00 – ' + pad(h + 1) + ':00</td>' + n(hc[h]) + n(perH[h] || 0)
+    + n(perH[h] ? (hc[h] / perH[h]).toFixed(1) : '-') + '</tr>');
+  const dutyRows = onDuty.map(x => '<tr><td>' + esc(x.driver) + '</td><td>' + esc(x.shift) + '</td><td>' + esc(DUTY.shifts[x.shift] || '') + '</td>'
+    + n(L.filter(r => r['Driver Last Mile'] === x.driver).length) + '</tr>');
+
+  // 5. late & rejected
+  const issues = L.filter(r => isLate(r) || st(r) === 'rejected').map(r => '<tr><td>' + esc(timeOf(r['Pickup Time'])) + '</td><td>' + esc(r['Order ID'] || r['System ID'])
+    + '</td><td>' + esc(r['Driver Last Mile'] || '-') + '</td><td>' + esc(st(r) === 'rejected' ? 'Rejected' : 'Late') + '</td><td>' + esc(r['Duration'] || '-')
+    + '</td><td>' + esc(r['Note'] || '') + '</td></tr>');
+
+  // 6. detail
+  const det = L.map((r, i) => '<tr class="' + (st(r) === 'rejected' ? 'rej' : isLate(r) ? 'late' : '') + '">' + n(i + 1)
+    + '<td>' + esc(timeOf(r['Pickup Time'])) + '</td><td>' + esc(r['Order ID'] || r['System ID']) + (ty ? '' : '<br><span class="muted" style="font-size:inherit">' + esc(r.Type) + '</span>')
+    + '</td><td>' + esc(r['Customer Name']) + '</td><td>' + esc(r['Vendor']) + '</td><td>' + esc(r['Dropoff']) + '</td><td>' + esc(r['Driver Last Mile'] || '-')
+    + '</td><td>' + esc(r['Status'] || '-') + '</td><td>' + esc(r['Duration'] || '-') + '</td><td>' + esc(r['On Time / Late'] || '-') + '</td></tr>');
+
+  $('#rp_doc').innerHTML = '<div class="rp-head"><h1>Nuanu Last Mile – Daily Report</h1>'
+    + '<div class="sub">Date: <b>' + dateTxt + '</b> · Last Mile type: <b>' + (ty || 'All') + '</b></div>'
+    + '<div class="sub">' + (isToday ? 'Day not closed yet – data as of ' + hm(RP.at) + ' · ' : '') + 'Generated ' + gen + '</div></div>'
+    + '<h2 class="rp-part">A. Last Mile Delivery</h2>'
+    + '<div class="rp-kpis">' + kp.map(x => '<div class="rp-kpi"><div class="l">' + x[0] + '</div><div class="v">' + x[1] + '</div></div>').join('') + '</div>'
+    + '<h3>1. Summary per driver</h3>'
+    + rpTable([['Driver'], ['Orders', 1], ['Delivered', 1], ['Rejected', 1], ['On Time', 1], ['Late', 1], ['On Time %', 1], ['Avg Duration', 1]], drv, drvFoot, 'No orders')
+    + '<h3>2. Orders per vendor</h3>'
+    + rpTable([['Vendor'], ['Delivery', 1], ['Expedition', 1], ['Total', 1]], ven, '', 'No orders')
+    + '<h3>3. Orders per venue (dropoff)</h3>'
+    + rpTable([['Venue'], ['Orders', 1], ['On Time %', 1], ['Avg Duration', 1]], vnu, '', 'No orders')
+    + '<h3>4. Busy hours vs drivers on duty</h3>'
+    + rpTable([['Hour'], ['Orders', 1], ['Drivers on duty', 1], ['Orders / driver', 1]], hrRows, '', 'No orders')
+    + '<h3>5. Drivers on duty</h3>'
+    + rpTable([['Driver'], ['Shift'], ['Hours'], ['Orders', 1]], dutyRows, '', 'No schedule for this date')
+    + '<h3>6. Late &amp; rejected orders</h3>'
+    + rpTable([['Time'], ['Order'], ['Driver'], ['Issue'], ['Duration'], ['Note']], issues, '', 'None – all orders on time')
+    + '<h3>7. Order detail</h3>'
+    + rpTable([['No', 1], ['Time'], ['Order'], ['Customer'], ['Vendor'], ['Dropoff'], ['Driver'], ['Status'], ['Duration'], ['Result']], det, '', 'No orders')
+    + rpWaterHtml()
+    + '<div class="rp-sig" id="rp_sigBlock">' + rpSigHtml() + '</div>';
+}
+function rpWaterHtml() {
+  const W = RP.water;
+  let h = '<h2 class="rp-part rp-water">B. Mineral Water Sales</h2>';
+  if (!W) return h + '<p class="muted">Data air mineral tidak tersedia.</p>';
+  const n = v => '<td class="n">' + v + '</td>';
+  const S = W.sales || [], R = W.refills || [], M = W.moves || [], D = W.deposits || [];
+  const sum = (a, f) => a.reduce((x, o) => x + (Number(f(o)) || 0), 0);
+  const sold = sum(S, o => o.qty), rev = sum(S, o => o.total);
+  const own = !!W.owner, unit = Number(W.lastCost) || DEFAULT_COST, cogs = sold * unit;
+  const kp = [['Bottles Sold', sold.toLocaleString('id-ID')], ['Transactions', S.length], ['Gross Revenue', rpn(rev)]]
+    .concat(own ? [['COGS (' + rpn(unit) + '/btl)', rpn(cogs)], ['Net', rpn(rev - cogs)], ['Margin', rev ? ((rev - cogs) / rev * 100).toFixed(1) + '%' : '-']] : []);
+  h += '<div class="rp-kpis">' + kp.map(x => '<div class="rp-kpi"><div class="l">' + x[0] + '</div><div class="v">' + x[1] + '</div></div>').join('') + '</div>';
+
+  // per metode bayar
+  const groups = PAYS.concat(S.some(o => payKey(o.payment) === 'Lainnya') ? ['Lainnya'] : []);
+  const payRows = groups.map(p => {
+    const L = S.filter(o => payKey(o.payment) === p);
+    return '<tr><td>' + p + '</td>' + n(L.length) + n(sum(L, o => o.qty)) + n(rpn(sum(L, o => o.total))) + n(rev ? (sum(L, o => o.total) / rev * 100).toFixed(0) + '%' : '-') + '</tr>';
+  });
+  h += '<h3>1. Sales per payment method</h3>'
+    + rpTable([['Payment'], ['Transactions', 1], ['Bottles', 1], ['Amount', 1], ['Share', 1]], payRows,
+      '<td><b>TOTAL</b></td>' + n(S.length) + n(sold) + n(rpn(rev)) + n(rev ? '100%' : '-'), '');
+
+  // per tim
+  const teamRows = ['Taxi', 'Last Mile'].map(t => {
+    const L = S.filter(o => o.team === t);
+    return '<tr><td>' + t + '</td>' + n(L.length) + n(sum(L, o => o.qty)) + n(rpn(sum(L, o => o.total)))
+      + n(rpn(sum(L.filter(o => payKey(o.payment) === 'Cash'), o => o.total))) + '</tr>';
+  });
+  h += '<h3>2. Sales per team</h3>' + rpTable([['Team'], ['Transactions', 1], ['Bottles', 1], ['Amount', 1], ['Of which cash', 1]], teamRows, '', '');
+
+  // pergerakan stok
+  const isToday = RP.date === ymd(new Date());
+  h += '<h3>3. Stock movement</h3>'
+    + rpTable([['Item'], ['Bottles', 1], ['Slots (12)', 1]], [
+      ['Restock in (warehouse)', sum(R, o => o.qty)], ['Moved to showcase', sum(M, o => o.qty)], ['Sold', sold],
+      ['Stock now – showcase', W.stockShowcase], ['Stock now – warehouse', W.stockWarehouse], ['Stock now – total', W.stock]
+    ].map(x => '<tr><td>' + x[0] + '</td>' + n(Math.round(Number(x[1]) || 0).toLocaleString('id-ID')) + n(slotFmt(x[1])) + '</tr>'), '', '')
+    + (isToday ? '' : '<p class="muted" style="margin:4px 0 0">"Stock now" = stok saat report dibuat, bukan stok pada tanggal report.</p>');
+
+  // setoran cash Last Mile
+  const C = W.cashLM || [];
+  const cRows = C.map(x => '<tr><td>' + esc(x.name) + '</td>' + n(rpn(x.cash)) + n(rpn(x.deposit)) + n(rpn(x.outstanding)) + '</tr>');
+  h += '<h3>4. Last Mile cash handover to Taxi</h3>'
+    + rpTable([['Seller'], ['Cash sold', 1], ['Handed over', 1], ['Outstanding', 1]], cRows,
+      '<td><b>TOTAL</b></td>' + n(rpn(sum(C, x => x.cash))) + n(rpn(sum(C, x => x.deposit))) + n(rpn(sum(C, x => x.outstanding))), 'No Last Mile cash sales')
+    + (D.length ? rpTable([['Handover'], ['Received by'], ['Amount', 1]], D.map(o => '<tr><td>' + esc(o.from) + '</td><td>' + esc(o.receivedBy) + '</td>' + n(rpn(o.amount)) + '</tr>'), '', '') : '');
+
+  // detail transaksi
+  const det = S.map((o, i) => '<tr>' + n(i + 1) + '<td>' + esc(o.team || '-') + '</td>' + n(o.qty) + n(rpn(o.price)) + n(rpn(o.total))
+    + '<td>' + esc(o.payment) + '</td><td>' + esc(o.by || '') + '</td><td>' + esc(o.notes || '') + '</td></tr>');
+  h += '<h3>5. Sales detail</h3>'
+    + rpTable([['No', 1], ['Team'], ['Qty', 1], ['Price', 1], ['Total', 1], ['Payment'], ['By'], ['Note']], det, '', 'No sales on this date');
+  return h;
+}
+function openReport() {
+  $('#rp_date').value = $('#to').value || ymd(new Date());
+  showTab('report');
+}
+function printReport() {
+  if (!RP.date) return;
+  const t = document.title;
+  document.title = 'Last Mile Daily Report ' + RP.date;
+  window.print();
+  setTimeout(() => { document.title = t; }, 1500);
+}
+
 /* ===== AIR MINERAL ===== */
 const PAYS = ['Cash', 'Card', 'QRIS', 'Transfer'];
 const DEFAULT_PRICE = 15000;   // harga jual per botol
@@ -974,6 +1240,7 @@ const payKey = p => PAYS.find(x => x.toUpperCase() === String(p || '').trim().to
 function refreshAll() {
   if (canDel()) { load(); loadActive(); loadCal(); }
   if ($('#tab-water').classList.contains('active')) loadWater();
+  if ($('#tab-report').classList.contains('active')) loadReport();
 }
 function initWater() {
   const t = new Date();
