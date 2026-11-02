@@ -273,7 +273,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
         <button type="button" class="type-btn" data-type="Expedition" onclick="setType('Expedition')">Expedition</button>
       </div>
       <div class="form-grid">
-        <label><span class="req">Date</span><input type="date" name="date" required></label>
+        <label><span class="req">Date</span><input type="date" name="date" required data-auto="date" oninput="this.dataset.touched=1"></label>
       </div>
 
       <fieldset id="fs-delivery">
@@ -289,7 +289,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
         <h2 style="margin-top:18px">Pickup &amp; Dropoff</h2>
         <div class="form-grid">
           <div data-venue="pickup" data-label="Pickup" data-req="1"></div>
-          <label>Pickup Time<input type="time" name="pickupTime"></label>
+          <label>Pickup Time<input type="time" name="pickupTime" data-auto="time" oninput="this.dataset.touched=1"><span class="muted">Otomatis jam saat Submit, ubah hanya jika perlu</span></label>
           <div data-venue="dropoff" data-label="Dropoff" data-req="1"></div>
           <label class="full">Note<textarea name="note"></textarea></label>
         </div>
@@ -308,7 +308,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
           <div data-venue="expedition" data-list="exp" data-label="Expedition" data-req="1"></div>
           <label><span class="req">Name (penerima)</span><input name="name" required></label>
           <div data-venue="location" data-label="Location" data-req="1"></div>
-          <label>Received (jam terima)<input type="time" name="receivedTime"></label>
+          <label>Received (jam terima)<input type="time" name="receivedTime" data-auto="time" oninput="this.dataset.touched=1"><span class="muted">Otomatis jam saat Submit, ubah hanya jika perlu</span></label>
           <label>Payment<select name="payment" id="f_payment" onchange="toggleCod()"><option>Prepaid</option><option>COD</option></select></label>
           <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span><input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
           <label class="full"><span class="req">Items (foto barang diterima)</span><input type="file" accept="image/*" id="f_items" required><img class="photo-prev" id="prev_items"></label>
@@ -451,7 +451,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 23 Okt 2026 (k)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 2 Nov 2026 (m)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -579,6 +579,7 @@ function showTab(t) {
   if (t === 'active') loadActive();
   if (t === 'water') loadWater();
   if (t === 'report') loadReport();
+  if (t === 'new') autoTimes();
   window.scrollTo(0, 0);
 }
 
@@ -948,7 +949,8 @@ const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustu
 const DOW = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
 function shiftCls(s) {
   const k = String(s || '').trim().toUpperCase();
-  if (/^(OFF|DO|LIBUR|L|CUTI)$/.test(k)) return 's-OFF';
+  // libur & cuti (dari Leave Management): tidak dihitung on duty
+  if (/^(OFF|DO|LIBUR|L|CUTI|AL|SL|UL|DP|CO|CT|DIS|PH|ML)$/.test(k)) return 's-OFF';
   return ['M', 'M1', 'M2', 'MID', 'A', 'N', 'EO'].indexOf(k) >= 0 ? 's-' + k : 's-x';
 }
 const isOff = s => shiftCls(s) === 's-OFF' ? 1 : 0;
@@ -1559,14 +1561,24 @@ function resetForm() {
   const f = $('#newForm'), keepDriver = $('#f_driver').value, keepType = $('#f_type').value;
   f.reset();
   $('#f_type').value = keepType;
-  f.querySelector('[name=date]').value = ymd(new Date());
-  f.querySelector('[name=pickupTime]').value = hm(new Date());
-  f.querySelector('[name=receivedTime]').value = hm(new Date());
+  $$('#newForm [data-auto]').forEach(i => { delete i.dataset.touched; });
+  autoTimes();
   if (keepDriver) $('#f_driver').value = keepDriver;
   $$('#newForm .photo-prev').forEach(i => { i.style.display = 'none'; i.removeAttribute('src'); });
   $$('#newForm .venue-txt').forEach(t => { t.style.display = 'none'; t.required = false; t.value = ''; });
   toggleCod();
 }
+
+// Tanggal & jam di form Delivery Baru mengikuti waktu sekarang (sampai diubah manual),
+// lalu diambil ulang tepat saat Submit. Jadi membuka tab lebih awal tidak membuat order tercatat late.
+function autoTimes() {
+  const now = new Date();
+  $$('#newForm [data-auto]').forEach(i => {
+    if (i.dataset.touched) return;
+    i.value = i.dataset.auto === 'date' ? ymd(now) : hm(now);
+  });
+}
+setInterval(function () { if ($('#tab-new').classList.contains('active')) autoTimes(); }, 20000);
 
 function compress(file, max, q) {
   max = max || 1280; q = q || 0.75;
@@ -1593,6 +1605,7 @@ async function submitDelivery(ev) {
   btn.disabled = true; btn.textContent = 'Mengirim...';
   msg.className = 'msg';
   try {
+    autoTimes();   // jam pickup / received = saat tombol Submit ditekan
     const data = Object.fromEntries(new FormData(f).entries());
     if (data.type === 'Delivery') {
       data.photos = {};
