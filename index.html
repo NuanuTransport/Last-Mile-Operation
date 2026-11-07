@@ -452,7 +452,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 7 Nov 2026 (o)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 7 Nov 2026 (p)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -493,22 +493,16 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 </div>
 
 <div class="overlay" id="wedit" onclick="if(event.target===this)closeWEdit()">
-  <div class="modal" style="max-width:440px">
-    <h3>Edit Penjualan Air</h3>
+  <div class="modal" style="max-width:420px">
+    <h3>Ubah Metode Bayar</h3>
     <div id="we_info" class="muted" style="margin-bottom:12px"></div>
     <form onsubmit="submitWEdit(event)">
-      <div class="form-grid">
-        <label><span class="req">Qty (botol)</span><input type="number" id="we_qty" min="1" step="1" inputmode="numeric" required oninput="weTotal()"></label>
-        <label><span class="req">Harga / botol (Rp)</span><input type="number" id="we_price" min="0" step="1" inputmode="numeric" required oninput="weTotal()"></label>
-      </div>
-      <label style="margin-top:12px"><span class="req">Pembayaran</span></label>
+      <label><span class="req">Pembayaran</span></label>
       <div class="seg" id="we_pay" style="margin-top:4px"></div>
       <input type="hidden" id="we_payment" value="Cash">
-      <label>Catatan<input id="we_notes" placeholder="Opsional"></label>
-      <div class="total-line"><span>Total</span><span id="we_total">Rp 0</span></div>
-      <p class="muted" style="margin:6px 0 0">Tanggal tidak bisa diubah. Setiap perubahan dicatat otomatis di Catatan.</p>
+      <p class="muted" style="margin:6px 0 0">Hanya metode bayar yang bisa diubah. Perubahan dicatat otomatis di Catatan.</p>
       <div class="msg" id="weMsg" style="margin-top:12px"></div>
-      <button class="btn" id="weBtn" style="margin-top:14px;width:100%;padding:12px">Simpan Perubahan</button>
+      <button class="btn" id="weBtn" style="margin-top:14px;width:100%;padding:12px">Simpan</button>
       <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closeWEdit()">Batal</button>
     </form>
   </div>
@@ -1421,23 +1415,20 @@ function renderWater() {
       return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + BADGE[k] + '">' + k + '</span></td><td>' + teamTag(team) + '</td>'
         + '<td>' + qty + '</td><td>' + price + '</td><td>' + total + '</td>'
         + '<td>' + esc(pay) + '</td><td>' + esc(note) + '</td><td>' + esc(o.by || '') + '</td>'
-        + '<td>' + (k === 'Jual' && o.canEdit ? '<button type="button" class="btn ghost" style="padding:4px 10px" onclick="openWEdit(\'' + esc(o.id) + '\')">Edit</button>' : '') + '</td></tr>';
+        + '<td>' + (k === 'Jual' && o.canEdit ? '<button type="button" class="btn ghost" style="padding:4px 10px" onclick="openWEdit(\'' + esc(o.id) + '\')">Ubah Bayar</button>' : '') + '</td></tr>';
     }).join('') || '<tr><td colspan="10" class="muted">Belum ada transaksi</td></tr>');
 }
 
-/* ===== EDIT PENJUALAN AIR ===== */
+/* ===== UBAH METODE BAYAR PENJUALAN AIR ===== */
 let WEDIT = null;
 function openWEdit(id) {
   const o = (WATER.sales || []).filter(x => x.id === id)[0];
   if (!o) return;
   WEDIT = o;
-  $('#we_info').textContent = o.id + ' · ' + o.date + ' · ' + (o.by || '') + (o.team ? ' (' + o.team + ')' : '');
-  $('#we_qty').value = o.qty;
-  $('#we_price').value = o.price;
-  $('#we_notes').value = o.notes || '';
+  $('#we_info').innerHTML = esc(o.id) + ' · ' + esc(o.date) + ' · ' + esc(o.by || '') + (o.team ? ' (' + esc(o.team) + ')' : '')
+    + '<br>' + btl(o.qty) + ' × ' + rpn(o.price) + ' = <b>' + rpn(o.total) + '</b> · sekarang <b>' + esc(o.payment || '-') + '</b>';
   $('#we_pay').innerHTML = PAYS.map(p => '<button type="button" data-pay="' + p + '" onclick="setWPay(\'' + p + '\')">' + p + '</button>').join('');
   setWPay(PAYS.indexOf(o.payment) >= 0 ? o.payment : 'Cash');
-  weTotal();
   $('#weMsg').className = 'msg';
   $('#wedit').classList.add('show');
 }
@@ -1446,27 +1437,25 @@ function setWPay(p) {
   $('#we_payment').value = p;
   $$('#we_pay button').forEach(b => b.classList.toggle('active', b.dataset.pay === p));
 }
-function weTotal() { $('#we_total').textContent = rpn((Number($('#we_qty').value) || 0) * (Number($('#we_price').value) || 0)); }
 async function submitWEdit(ev) {
   ev.preventDefault();
   if (!WEDIT) return;
+  if ($('#we_payment').value === WEDIT.payment) { closeWEdit(); return; }
   const btn = $('#weBtn');
   btn.disabled = true; btn.textContent = 'Menyimpan...';
   $('#weMsg').className = 'msg';
   try {
-    const out = await post('waterSaleEdit', {
-      id: WEDIT.id, qty: $('#we_qty').value, price: $('#we_price').value,
-      payment: $('#we_payment').value, notes: $('#we_notes').value.trim()
-    });
+    // Qty & harga dikirim apa adanya (tidak berubah); catatan tidak dikirim supaya tetap seperti semula
+    const out = await post('waterSaleEdit', { id: WEDIT.id, qty: WEDIT.qty, price: WEDIT.price, payment: $('#we_payment').value });
     closeWEdit();
-    waterMsg(out.unchanged ? 'Tidak ada perubahan.' : 'Penjualan ' + out.id + ' diperbarui' + (out.changes && out.changes.length ? ': ' + out.changes.join('; ') : '') + '.', 'ok');
+    waterMsg(out.unchanged ? 'Tidak ada perubahan.' : 'Penjualan ' + out.id + ' diperbarui: ' + (out.changes || []).join('; ') + '.', 'ok');
     loadWater();
     window.scrollTo(0, 0);
   } catch (err) {
     $('#weMsg').textContent = 'Gagal: ' + err.message;
     $('#weMsg').className = 'msg err';
   } finally {
-    btn.disabled = false; btn.textContent = 'Simpan Perubahan';
+    btn.disabled = false; btn.textContent = 'Simpan';
   }
 }
 
