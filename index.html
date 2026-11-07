@@ -449,10 +449,11 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 
     <div class="card">
       <h2>Riwayat Transaksi <span class="muted">(50 terbaru)</span></h2>
+      <p class="muted" id="w_editInfo" style="margin:-6px 0 10px"></p>
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 8 Nov 2026 (q)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 8 Nov 2026 (r) · <span id="srvVer">Server: -</span></p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -1331,8 +1332,9 @@ async function loadWater() {
     const d = await api({ action: 'water', from: $('#w_from').value, to: $('#w_to').value });
     if (!d.ok) { if (d.error !== 'unauthorized') waterMsg('Error: ' + d.error, 'err'); return; }
     WATER = d;
-    // Server lama tidak mengirim "canEdit" -> tandai supaya ketahuan deployment belum terbaru
-    WATER.oldServer = (d.sales || []).length > 0 && !('canEdit' in d.sales[0]);
+    // Server lama tidak mengirim "version" -> tandai supaya ketahuan deployment belum terbaru
+    WATER.oldServer = !d.version;
+    $('#srvVer').textContent = 'Server: ' + (d.version || 'versi lama');
     if (WATER.oldServer) waterMsg('Peringatan: aplikasi masih terhubung ke WebAPI versi lama. Cek Deploy > Manage deployments: URL Web app harus sama dengan API_URL di index.html, lalu Edit > New version > Deploy.', 'err');
     renderWater();
   } catch (e) {
@@ -1403,9 +1405,14 @@ function renderWater() {
 
   const items = S.map(o => Object.assign({ kind: 'Jual' }, o)).concat(R.map(o => Object.assign({ kind: 'Restock' }, o)), M.map(o => Object.assign({ kind: 'Isi Showcase' }, o)), D.map(o => Object.assign({ kind: 'Setoran' }, o)))
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id))).slice(0, 50);
+  const nEdit = S.filter(o => o.canEdit === undefined ? isOwner() : o.canEdit).length;
+  $('#w_editInfo').textContent = 'Login: ' + (USER.name || USER.email) + ' · Tim ' + (USER.team || '-') + '. '
+    + (isOwner() ? 'Tombol Ubah ada di kolom Bayar untuk semua penjualan.'
+      : nEdit ? 'Tombol Ubah ada di kolom Bayar, hanya untuk penjualan yang Anda input sendiri.'
+      : 'Tim Last Mile hanya bisa mengubah bayar penjualan yang diinput sendiri. Supaya bisa mengubah semua penjualan, isi kolom Team akun ini di tab Users dengan Taxi atau Admin, lalu keluar dan masuk lagi.');
   const BADGE = { 'Jual': 'b-sale', 'Restock': 'b-restock', 'Isi Showcase': 'b-move', 'Setoran': 'b-dep' };
   const teamTag = t => t ? '<span class="team-tag ' + (t === 'Taxi' ? 't-taxi' : 't-lm') + '">' + t + '</span>' : '-';
-  $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Tim</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th><th></th></tr>'
+  $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Tim</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th></tr>'
     + (items.map(o => {
       const k = o.kind;
       let qty = btl(o.qty), price = '-', total = '-', pay = '-', team = '', note = o.notes || '';
@@ -1417,9 +1424,9 @@ function renderWater() {
       }
       return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + BADGE[k] + '">' + k + '</span></td><td>' + teamTag(team) + '</td>'
         + '<td>' + qty + '</td><td>' + price + '</td><td>' + total + '</td>'
-        + '<td>' + esc(pay) + '</td><td>' + esc(note) + '</td><td>' + esc(o.by || '') + '</td>'
-        + '<td>' + (k === 'Jual' && (o.canEdit === undefined ? isOwner() : o.canEdit) ? '<button type="button" class="btn ghost" style="padding:4px 10px" onclick="openWEdit(\'' + esc(o.id) + '\')">Ubah Bayar</button>' : '') + '</td></tr>';
-    }).join('') || '<tr><td colspan="10" class="muted">Belum ada transaksi</td></tr>');
+        + '<td>' + esc(pay) + (k === 'Jual' && (o.canEdit === undefined ? isOwner() : o.canEdit) ? ' <button type="button" class="btn ghost" style="padding:3px 8px;font-size:12px;margin-left:6px" onclick="openWEdit(\'' + esc(o.id) + '\')">Ubah</button>' : '') + '</td>'
+        + '<td>' + esc(note) + '</td><td>' + esc(o.by || '') + '</td></tr>';
+    }).join('') || '<tr><td colspan="9" class="muted">Belum ada transaksi</td></tr>');
 }
 
 /* ===== UBAH METODE BAYAR PENJUALAN AIR ===== */
@@ -1889,7 +1896,7 @@ async function submitFin(ev) {
 }
 
 init();
-setInterval(function () { if (getTok() && USER.team && canDel()) { load(); loadActive(); } }, 120000);
+setInterval(function () { if (getTok() && USER.team && canDelivery()) { load(); loadActive(); } }, 120000);
 </script>
 </body>
 </html>
