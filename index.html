@@ -452,7 +452,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 2 Nov 2026 (n)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 7 Nov 2026 (o)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -488,6 +488,28 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="msg" id="editMsg" style="margin-top:12px"></div>
       <button class="btn" id="editBtn" style="margin-top:14px;width:100%;padding:12px">Simpan Perubahan</button>
       <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closeEdit()">Batal</button>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="wedit" onclick="if(event.target===this)closeWEdit()">
+  <div class="modal" style="max-width:440px">
+    <h3>Edit Penjualan Air</h3>
+    <div id="we_info" class="muted" style="margin-bottom:12px"></div>
+    <form onsubmit="submitWEdit(event)">
+      <div class="form-grid">
+        <label><span class="req">Qty (botol)</span><input type="number" id="we_qty" min="1" step="1" inputmode="numeric" required oninput="weTotal()"></label>
+        <label><span class="req">Harga / botol (Rp)</span><input type="number" id="we_price" min="0" step="1" inputmode="numeric" required oninput="weTotal()"></label>
+      </div>
+      <label style="margin-top:12px"><span class="req">Pembayaran</span></label>
+      <div class="seg" id="we_pay" style="margin-top:4px"></div>
+      <input type="hidden" id="we_payment" value="Cash">
+      <label>Catatan<input id="we_notes" placeholder="Opsional"></label>
+      <div class="total-line"><span>Total</span><span id="we_total">Rp 0</span></div>
+      <p class="muted" style="margin:6px 0 0">Tanggal tidak bisa diubah. Setiap perubahan dicatat otomatis di Catatan.</p>
+      <div class="msg" id="weMsg" style="margin-top:12px"></div>
+      <button class="btn" id="weBtn" style="margin-top:14px;width:100%;padding:12px">Simpan Perubahan</button>
+      <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closeWEdit()">Batal</button>
     </form>
   </div>
 </div>
@@ -668,12 +690,27 @@ async function api(params) {
   if (!data.ok) handleAuthError(data.error);
   return data;
 }
+/* Anti-dobel: setiap kiriman membawa kode unik (rid). Kalau koneksi putus atau tombol
+   ditekan ulang dengan isi yang sama, kode yang sama dikirim lagi dan server tidak
+   menulis baris baru. Kode baru dibuat setelah berhasil, atau kalau isinya berubah. */
+const PENDING = {};
+const SIG_SKIP = ['photos', 'photo', 'itemsPhoto', 'date', 'pickupTime', 'receivedTime'];
+function newRid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
 async function post(action, data) {
   const tok = getTok();
   if (!tok) { showLogin('Silakan masuk.'); throw new Error('Silakan masuk lalu kirim ulang.'); }
-  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ tok: tok, action: action, data: data }) });
-  const out = await res.json();
+  const k = action + '|' + ((data && (data.type || data.id)) || '');
+  const sig = JSON.stringify(data, (key, v) => SIG_SKIP.indexOf(key) >= 0 ? undefined : v);
+  if (!PENDING[k] || PENDING[k].sig !== sig) PENDING[k] = { rid: newRid(), sig: sig };
+  let out;
+  try {
+    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ tok: tok, action: action, data: data, rid: PENDING[k].rid }) });
+    out = await res.json();
+  } catch (e) {
+    throw new Error('Koneksi terputus sebelum ada jawaban dari server. Data mungkin sudah tersimpan. Tekan Simpan sekali lagi: aman, tidak akan dobel.');
+  }
   if (!out.ok) { handleAuthError(out.error); throw new Error(out.error); }
+  delete PENDING[k];
   return out;
 }
 
@@ -1371,7 +1408,7 @@ function renderWater() {
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id))).slice(0, 50);
   const BADGE = { 'Jual': 'b-sale', 'Restock': 'b-restock', 'Isi Showcase': 'b-move', 'Setoran': 'b-dep' };
   const teamTag = t => t ? '<span class="team-tag ' + (t === 'Taxi' ? 't-taxi' : 't-lm') + '">' + t + '</span>' : '-';
-  $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Tim</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th></tr>'
+  $('#w_list').innerHTML = '<tr><th>Tanggal</th><th>Jenis</th><th>Tim</th><th>Qty</th><th>Harga</th><th>Total</th><th>Bayar</th><th>Catatan</th><th>Oleh</th><th></th></tr>'
     + (items.map(o => {
       const k = o.kind;
       let qty = btl(o.qty), price = '-', total = '-', pay = '-', team = '', note = o.notes || '';
@@ -1383,8 +1420,54 @@ function renderWater() {
       }
       return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + BADGE[k] + '">' + k + '</span></td><td>' + teamTag(team) + '</td>'
         + '<td>' + qty + '</td><td>' + price + '</td><td>' + total + '</td>'
-        + '<td>' + esc(pay) + '</td><td>' + esc(note) + '</td><td>' + esc(o.by || '') + '</td></tr>';
-    }).join('') || '<tr><td colspan="9" class="muted">Belum ada transaksi</td></tr>');
+        + '<td>' + esc(pay) + '</td><td>' + esc(note) + '</td><td>' + esc(o.by || '') + '</td>'
+        + '<td>' + (k === 'Jual' && o.canEdit ? '<button type="button" class="btn ghost" style="padding:4px 10px" onclick="openWEdit(\'' + esc(o.id) + '\')">Edit</button>' : '') + '</td></tr>';
+    }).join('') || '<tr><td colspan="10" class="muted">Belum ada transaksi</td></tr>');
+}
+
+/* ===== EDIT PENJUALAN AIR ===== */
+let WEDIT = null;
+function openWEdit(id) {
+  const o = (WATER.sales || []).filter(x => x.id === id)[0];
+  if (!o) return;
+  WEDIT = o;
+  $('#we_info').textContent = o.id + ' · ' + o.date + ' · ' + (o.by || '') + (o.team ? ' (' + o.team + ')' : '');
+  $('#we_qty').value = o.qty;
+  $('#we_price').value = o.price;
+  $('#we_notes').value = o.notes || '';
+  $('#we_pay').innerHTML = PAYS.map(p => '<button type="button" data-pay="' + p + '" onclick="setWPay(\'' + p + '\')">' + p + '</button>').join('');
+  setWPay(PAYS.indexOf(o.payment) >= 0 ? o.payment : 'Cash');
+  weTotal();
+  $('#weMsg').className = 'msg';
+  $('#wedit').classList.add('show');
+}
+function closeWEdit() { $('#wedit').classList.remove('show'); WEDIT = null; }
+function setWPay(p) {
+  $('#we_payment').value = p;
+  $$('#we_pay button').forEach(b => b.classList.toggle('active', b.dataset.pay === p));
+}
+function weTotal() { $('#we_total').textContent = rpn((Number($('#we_qty').value) || 0) * (Number($('#we_price').value) || 0)); }
+async function submitWEdit(ev) {
+  ev.preventDefault();
+  if (!WEDIT) return;
+  const btn = $('#weBtn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  $('#weMsg').className = 'msg';
+  try {
+    const out = await post('waterSaleEdit', {
+      id: WEDIT.id, qty: $('#we_qty').value, price: $('#we_price').value,
+      payment: $('#we_payment').value, notes: $('#we_notes').value.trim()
+    });
+    closeWEdit();
+    waterMsg(out.unchanged ? 'Tidak ada perubahan.' : 'Penjualan ' + out.id + ' diperbarui' + (out.changes && out.changes.length ? ': ' + out.changes.join('; ') : '') + '.', 'ok');
+    loadWater();
+    window.scrollTo(0, 0);
+  } catch (err) {
+    $('#weMsg').textContent = 'Gagal: ' + err.message;
+    $('#weMsg').className = 'msg err';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Simpan Perubahan';
+  }
 }
 
 async function submitWaterSale(ev) {
