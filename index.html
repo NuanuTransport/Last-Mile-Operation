@@ -452,7 +452,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 7 Nov 2026 (p)</p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 8 Nov 2026 (q)</p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -1331,6 +1331,9 @@ async function loadWater() {
     const d = await api({ action: 'water', from: $('#w_from').value, to: $('#w_to').value });
     if (!d.ok) { if (d.error !== 'unauthorized') waterMsg('Error: ' + d.error, 'err'); return; }
     WATER = d;
+    // Server lama tidak mengirim "canEdit" -> tandai supaya ketahuan deployment belum terbaru
+    WATER.oldServer = (d.sales || []).length > 0 && !('canEdit' in d.sales[0]);
+    if (WATER.oldServer) waterMsg('Peringatan: aplikasi masih terhubung ke WebAPI versi lama. Cek Deploy > Manage deployments: URL Web app harus sama dengan API_URL di index.html, lalu Edit > New version > Deploy.', 'err');
     renderWater();
   } catch (e) {
     waterMsg('Gagal memuat data air mineral', 'err');
@@ -1415,7 +1418,7 @@ function renderWater() {
       return '<tr><td>' + esc(o.date) + '</td><td><span class="badge ' + BADGE[k] + '">' + k + '</span></td><td>' + teamTag(team) + '</td>'
         + '<td>' + qty + '</td><td>' + price + '</td><td>' + total + '</td>'
         + '<td>' + esc(pay) + '</td><td>' + esc(note) + '</td><td>' + esc(o.by || '') + '</td>'
-        + '<td>' + (k === 'Jual' && o.canEdit ? '<button type="button" class="btn ghost" style="padding:4px 10px" onclick="openWEdit(\'' + esc(o.id) + '\')">Ubah Bayar</button>' : '') + '</td></tr>';
+        + '<td>' + (k === 'Jual' && (o.canEdit === undefined ? isOwner() : o.canEdit) ? '<button type="button" class="btn ghost" style="padding:4px 10px" onclick="openWEdit(\'' + esc(o.id) + '\')">Ubah Bayar</button>' : '') + '</td></tr>';
     }).join('') || '<tr><td colspan="10" class="muted">Belum ada transaksi</td></tr>');
 }
 
@@ -1452,7 +1455,9 @@ async function submitWEdit(ev) {
     loadWater();
     window.scrollTo(0, 0);
   } catch (err) {
-    $('#weMsg').textContent = 'Gagal: ' + err.message;
+    $('#weMsg').textContent = /unknown action/i.test(err.message)
+      ? 'Gagal: WebAPI yang terhubung masih versi lama (belum ada fitur ubah bayar). Cek Deploy > Manage deployments: URL Web app harus sama dengan API_URL di index.html, lalu Edit > New version > Deploy.'
+      : 'Gagal: ' + err.message;
     $('#weMsg').className = 'msg err';
   } finally {
     btn.disabled = false; btn.textContent = 'Simpan';
