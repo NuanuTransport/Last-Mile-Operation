@@ -144,6 +144,11 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .t-taxi{background:#fef3c7;color:var(--warn)}.t-lm{background:#dbeafe;color:var(--info)}.b-dep{background:#fce7f3;color:#be185d}
 .owe{color:var(--bad);font-weight:700}
 .s-N{background:#ede9fe;color:#6d28d9}.s-MID{background:#ccfbf1;color:#0f766e}.s-EO{background:#fce7f3;color:#be185d}.s-OFF{background:#f3f4f6;color:#6b7280}.s-x{background:#fef9c3;color:#854d0e}
+/* scan resi & baca foto booking */
+.scan-row{display:flex;gap:6px}.scan-row input{flex:1}.scan-row .btn{flex-shrink:0}
+#scanReader{width:100%;min-height:240px;background:#000;border-radius:10px;overflow:hidden}
+#scanReader video{width:100%!important;height:auto!important}
+.ocr{font-size:12px;color:var(--info);font-weight:600}.ocr.err{color:var(--bad)}.ocr:empty{display:none}
 @media(max-width:640px){.cal .day{min-height:54px}.cal .chip{display:none}.cal .cnt2{display:block}}
 /* ===== REPORT HARIAN (PDF) ===== */
 .sig-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
@@ -296,7 +301,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
         </div>
         <h2 style="margin-top:18px">Foto</h2>
         <div class="form-grid">
-          <label>Booking Photo<input type="file" accept="image/*" data-photo="booking"><img class="photo-prev" id="prev_booking"></label>
+          <label>Booking Photo<input type="file" accept="image/*" data-photo="booking"><span class="muted">Order ID, Vendor, Customer dan Value terisi otomatis dari foto layar order</span><span class="ocr" id="ocrMsg"></span><img class="photo-prev" id="prev_booking"></label>
           <label>Handover<input type="file" accept="image/*" data-photo="handover"><img class="photo-prev" id="prev_handover"></label>
           <label>Sealing<input type="file" accept="image/*" data-photo="sealing"><img class="photo-prev" id="prev_sealing"></label>
         </div>
@@ -305,14 +310,14 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <fieldset id="fs-exp" disabled style="display:none">
         <h2 style="margin-top:18px">Paket Ekspedisi</h2>
         <div class="form-grid">
-          <label><span class="req">Order ID / No. Resi</span><input name="orderId" required></label>
+          <label><span class="req">Order ID / No. Resi</span><div class="scan-row"><input name="orderId" id="f_expId" required><button type="button" class="btn" onclick="openScan()">Scan Resi</button></div><span class="ocr" id="expMsg"></span></label>
           <div data-venue="expedition" data-list="exp" data-label="Expedition" data-req="1"></div>
           <label><span class="req">Name (penerima)</span><input name="name" required></label>
           <div data-venue="location" data-label="Location" data-req="1"></div>
           <label>Received (jam terima)<input type="time" name="receivedTime" data-auto="time" readonly class="auto"><span class="muted">Otomatis tercatat saat tombol Submit ditekan</span></label>
           <label>Payment<select name="payment" id="f_payment" onchange="toggleCod()"><option>Prepaid</option><option>COD</option></select></label>
           <label id="codWrap" style="display:none"><span class="req">Amount COD (Rp)</span><input type="number" name="amount" id="f_amount" min="0" step="1" inputmode="numeric"></label>
-          <label class="full"><span class="req">Items (foto barang diterima)</span><input type="file" accept="image/*" id="f_items" required><img class="photo-prev" id="prev_items"></label>
+          <label class="full"><span class="req">Items (foto barang diterima)</span><input type="file" accept="image/*" id="f_items" required><span class="muted">Kalau label resi ikut terfoto, No. Resi terisi otomatis</span><img class="photo-prev" id="prev_items"></label>
           <label class="full">Note<textarea name="note"></textarea></label>
         </div>
         <p class="muted">Driver tidak dipilih di sini. Nama driver tercatat otomatis dari akun yang mengirim POD.</p>
@@ -453,7 +458,7 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <div class="scroll"><table id="w_list"></table></div>
     </div>
   </div>
-  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 8 Nov 2026 (r) · <span id="srvVer">Server: -</span></p>
+  <p class="muted" style="text-align:center;margin:8px 0 24px">Versi 16 Nov 2026 (s) · <span id="srvVer">Server: -</span></p>
 </main>
 
 <datalist id="dl_vendor"></datalist>
@@ -506,6 +511,17 @@ tfoot td{font-weight:700;border-top:2px solid var(--line)}
       <button class="btn" id="weBtn" style="margin-top:14px;width:100%;padding:12px">Simpan</button>
       <button type="button" class="btn ghost" style="margin-top:8px;width:100%" onclick="closeWEdit()">Batal</button>
     </form>
+  </div>
+</div>
+
+<div class="overlay" id="scan" onclick="if(event.target===this)closeScan()">
+  <div class="modal" style="max-width:480px">
+    <h3>Scan Resi</h3>
+    <div id="scanReader"></div>
+    <p class="muted" id="scanMsg" style="margin:8px 0 0"></p>
+    <label style="margin-top:12px">Atau ambil foto label resi<input type="file" accept="image/*" id="scanFile"></label>
+    <div id="scanTmp" style="display:none"></div>
+    <button type="button" class="btn ghost" style="margin-top:12px;width:100%" onclick="closeScan()">Batal</button>
   </div>
 </div>
 
@@ -644,6 +660,7 @@ function init() {
   $$('input[data-photo]').forEach(inp => previewOn(inp, $('#prev_' + inp.dataset.photo)));
   previewOn($('#f_items'), $('#prev_items'));
   previewOn($('#finPhoto'), $('#prev_fin'));
+  initScan();
   initWater();
   initReport();
   const t = getTok();
@@ -1332,7 +1349,7 @@ async function loadWater() {
     const d = await api({ action: 'water', from: $('#w_from').value, to: $('#w_to').value });
     if (!d.ok) { if (d.error !== 'unauthorized') waterMsg('Error: ' + d.error, 'err'); return; }
     WATER = d;
-    // Server lama tidak mengirim "version" -> tandai supaya ketahuan deployment belum terbaru
+    // Server lama tidak mengirim "canEdit" -> tandai supaya ketahuan deployment belum terbaru
     WATER.oldServer = !d.version;
     $('#srvVer').textContent = 'Server: ' + (d.version || 'versi lama');
     if (WATER.oldServer) waterMsg('Peringatan: aplikasi masih terhubung ke WebAPI versi lama. Cek Deploy > Manage deployments: URL Web app harus sama dengan API_URL di index.html, lalu Edit > New version > Deploy.', 'err');
@@ -1650,6 +1667,7 @@ function resetForm() {
   if (keepDriver) $('#f_driver').value = keepDriver;
   $$('#newForm .photo-prev').forEach(i => { i.style.display = 'none'; i.removeAttribute('src'); });
   $$('#newForm .venue-txt').forEach(t => { t.style.display = 'none'; t.required = false; t.value = ''; });
+  ['#ocrMsg', '#expMsg'].forEach(id => { $(id).textContent = ''; $(id).className = 'ocr'; });
   toggleCod();
 }
 
@@ -1709,6 +1727,187 @@ async function submitDelivery(ev) {
     btn.disabled = false; btn.textContent = label;
     window.scrollTo(0, 0);
   }
+}
+
+/* ===== SCAN RESI & BACA FOTO BOOKING ===== */
+// Library dimuat saat pertama kali dipakai, supaya halaman tetap cepat dibuka
+const LIB = {
+  qr: 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+  ocr: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'
+};
+const LOADED = {};
+function loadScript(url) {
+  return LOADED[url] || (LOADED[url] = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = res;
+    s.onerror = () => { delete LOADED[url]; rej(new Error('library gagal dimuat, cek koneksi internet')); };
+    document.head.appendChild(s);
+  }));
+}
+
+// Isi field pilihan (vendor / ekspedisi / lokasi) di dalam fieldset tertentu
+function setPick(scope, name, value) {
+  const inp = $(scope + ' input[name="' + name + '"]');
+  if (!inp) return;
+  const sel = inp.closest('label').querySelector('select.venue-sel');
+  const opt = Array.from(sel.options).find(o => o.value && o.value !== '__other' && normKey(o.value) === normKey(value));
+  if (opt) { sel.value = opt.value; inp.value = opt.value; inp.style.display = 'none'; inp.required = false; }
+  else { sel.value = '__other'; inp.style.display = ''; inp.required = sel.required; inp.value = value; }
+}
+const pickVal = (scope, name) => { const i = $(scope + ' input[name="' + name + '"]'); return i ? i.value.trim() : ''; };
+
+/* --- resi ekspedisi: QR / barcode di label --- */
+const COURIERS = [[/^J[A-Z]\d{8,}$/, 'J&T'], [/^SPX/i, 'Shopee Express'], [/^TG\d/i, 'Tokopedia'], [/^(NLID|NV)/i, 'Ninja Xpress'],
+  [/^(11)?LP\d/i, 'Lion Parcel'], [/^ID[ES]\d/i, 'ID Express'], [/^(LX|LEX|LZ)/i, 'Lazada Express'], [/^00\d{10}$/, 'SiCepat'], [/^\d{14,16}$/, 'JNE']];
+function resiOf(raw) {
+  const s = String(raw || '').trim().toUpperCase();
+  const m = s.match(/\b(SPX[A-Z0-9]{8,}|[A-Z]{2,5}\d{8,}|\d{12,16})\b/);
+  return m ? m[1] : s.replace(/\s+/g, '').slice(0, 40);
+}
+const courierOf = resi => { const c = COURIERS.find(x => x[0].test(resi)); return c ? c[1] : ''; };
+function qrFormats() {
+  const F = Html5QrcodeSupportedFormats;
+  return [F.QR_CODE, F.CODE_128, F.CODE_39, F.EAN_13, F.DATA_MATRIX];
+}
+function fillResi(resi) {
+  if (!resi) return;
+  $('#f_expId').value = resi;
+  const c = courierOf(resi);
+  if (c && !pickVal('#fs-exp', 'expedition')) setPick('#fs-exp', 'expedition', c);
+  $('#expMsg').className = 'ocr';
+  $('#expMsg').textContent = 'Resi terbaca: ' + resi + (c ? ' (' + c + ')' : '') + '. Cek lagi sebelum Submit.';
+}
+
+let SCANNER = null;
+async function openScan() {
+  $('#scanFile').value = '';
+  $('#scan').classList.add('show');
+  $('#scanMsg').textContent = 'Membuka kamera...';
+  try {
+    await loadScript(LIB.qr);
+    SCANNER = new Html5Qrcode('scanReader', { formatsToSupport: qrFormats(), verbose: false, experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+    await SCANNER.start({ facingMode: 'environment' },
+      { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(Math.min(w, h) * 0.6) }) },
+      txt => scanDone(txt), () => {});
+    $('#scanMsg').textContent = 'Arahkan kamera ke QR code atau barcode di label resi.';
+  } catch (e) {
+    $('#scanMsg').textContent = 'Kamera tidak bisa dibuka (' + (e.message || e) + '). Pakai foto label di bawah.';
+  }
+}
+async function stopScan() {
+  const s = SCANNER;
+  SCANNER = null;
+  if (!s) return;
+  try { if (s.isScanning) await s.stop(); s.clear(); } catch (e) {}
+}
+function closeScan() { stopScan(); $('#scan').classList.remove('show'); }
+function scanDone(raw) {
+  if (!$('#scan').classList.contains('show')) return;
+  fillResi(resiOf(raw));
+  closeScan();
+  try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
+}
+async function decodeFile(file) {
+  await loadScript(LIB.qr);
+  const h = new Html5Qrcode('scanTmp', { formatsToSupport: qrFormats(), verbose: false });
+  try { return await h.scanFile(file, false); }
+  finally { try { h.clear(); } catch (e) {} }
+}
+
+/* --- foto layar order Gojek / Grab: baca teks (OCR) --- */
+const OCR_VENDORS = [[/go\s*send/i, 'GoSend'], [/go\s*food/i, 'GoFood'], [/go\s*mart/i, 'GoMart'], [/grab\s*food/i, 'Grab Food'],
+  [/grab\s*(express|send|bike)/i, 'Grab Express'], [/grab\s*mart/i, 'Grab Mart'], [/shopee\s*food/i, 'ShopeeFood'], [/maxim/i, 'Maxim'], [/lalamove/i, 'Lalamove']];
+function ocrName(s) {
+  const w = [];
+  for (const t of String(s || '').split(/\s+/)) {
+    if (/^[A-Za-z][A-Za-z.'-]*$/.test(t)) w.push(t);
+    else if (w.length) break;
+  }
+  const n = w.join(' ').replace(/[.'-]+$/, '');
+  return n.length >= 2 && n.length <= 40 && !/^(nuanu|jl|jalan|rp|gopay|detail)$/i.test(n) ? n : '';
+}
+function parseBooking(text) {
+  const lines = String(text || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const out = {};
+  const v = OCR_VENDORS.find(x => x[0].test(text));
+  if (v) out.vendor = v[1];
+  const id = text.match(/\bF-\s?\d{6,}/i) || text.match(/\bGK-\s?\d{2}-\s?\d{6,}/i) || text.match(/\bGF-\s?\d{2,}/i) || text.match(/\bA-[A-Z0-9]{8,}\b/);
+  if (id) out.orderId = id[0].replace(/\s/g, '').toUpperCase();
+  if (!out.vendor && out.orderId) out.vendor = /^F-/.test(out.orderId) ? 'GoFood' : /^GK-/.test(out.orderId) ? 'GoSend' : /^GF-/.test(out.orderId) ? 'Grab Food' : '';
+  const keys = [/kirim ke/i, /nama penerima|penerima/i, /di-?\s?booking oleh/i, /pelanggan|customer/i];
+  for (const k of keys) {
+    const i = lines.findIndex(l => k.test(l));
+    if (i < 0) continue;
+    let n = ocrName((lines[i].split(k)[1] || '').replace(/^[\s:]+/, ''));
+    if (!n && lines[i + 1]) n = ocrName(lines[i + 1]);
+    if (n) { out.customer = n; break; }
+  }
+  const m = text.match(/(tagih tunai|total(?: harga| pembayaran| bayar)?|harga makanan)\s*:?\s*rp\s*([\d.,oO]+)/i);
+  if (m) { const n = Number(m[2].replace(/[oO]/g, '0').replace(/[^\d]/g, '')); if (n > 0) out.orderValue = n; }
+  return out;
+}
+// foto diperkecil, abu-abu dan kontras dinaikkan supaya teks lebih mudah terbaca
+function ocrPrep(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s);
+      c.height = Math.round(img.height * s);
+      const x = c.getContext('2d');
+      x.filter = 'grayscale(1) contrast(1.4)';
+      x.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c);
+    };
+    img.onerror = () => rej(new Error('foto tidak bisa dibuka'));
+    img.src = url;
+  });
+}
+async function readBooking(file) {
+  const msg = $('#ocrMsg');
+  msg.className = 'ocr';
+  if (!file) { msg.textContent = ''; return; }
+  msg.textContent = 'Membaca foto booking... (pertama kali bisa sampai 20 detik)';
+  try {
+    await loadScript(LIB.ocr);
+    const r = await Tesseract.recognize(await ocrPrep(file), 'eng');
+    const got = parseBooking(r.data.text), filled = [];
+    const put = (name, val, label) => {
+      const el = $('#fs-delivery [name="' + name + '"]');
+      if (el && val && !String(el.value).trim()) { el.value = val; filled.push(label + ': ' + val); }
+    };
+    put('orderId', got.orderId, 'Order ID');
+    put('customer', got.customer, 'Customer');
+    put('orderValue', got.orderValue, 'Value');
+    if (got.vendor && !pickVal('#fs-delivery', 'vendor')) { setPick('#fs-delivery', 'vendor', got.vendor); filled.push('Vendor: ' + got.vendor); }
+    msg.textContent = filled.length
+      ? 'Terisi otomatis dari foto: ' + filled.join(' | ') + '. Cek sebelum Submit.'
+      : 'Tidak ada data yang terbaca dari foto. Isi manual.';
+  } catch (e) {
+    msg.className = 'ocr err';
+    msg.textContent = 'Foto tidak bisa dibaca otomatis (' + (e.message || e) + '). Isi manual.';
+  }
+}
+
+function initScan() {
+  $('#scanFile').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    await stopScan();
+    $('#scanMsg').textContent = 'Membaca foto...';
+    try { scanDone(await decodeFile(f)); }
+    catch (err) { $('#scanMsg').textContent = 'QR / barcode tidak terbaca di foto ini. Foto lebih dekat dan tidak miring, atau ketik No. Resi manual.'; }
+  });
+  // foto Items: kalau No. Resi masih kosong, coba baca QR / barcode label dari foto itu
+  $('#f_items').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f || $('#f_expId').value.trim()) return;
+    decodeFile(f).then(raw => fillResi(resiOf(raw))).catch(() => {});
+  });
+  $('input[data-photo="booking"]').addEventListener('change', e => readBooking(e.target.files[0]));
 }
 
 /* ===== ON DELIVERY ===== */
@@ -1896,7 +2095,7 @@ async function submitFin(ev) {
 }
 
 init();
-setInterval(function () { if (getTok() && USER.team && canDelivery()) { load(); loadActive(); } }, 120000);
+setInterval(function () { if (getTok() && USER.team && canDel()) { load(); loadActive(); } }, 120000);
 </script>
 </body>
 </html>
